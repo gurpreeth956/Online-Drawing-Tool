@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+        <title>Online Drawing Tool</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="./design.css">
+        
+        <script src="./MainFile.js"></script>
+        <script>
+            init();
+        </script>
+    </head>
+    <body>
+        <h2>ONLINE DRAWING TOOL</h2>
+        <div id="menu_toolbar">
+            <span class="menubar_control"><input type="button" value="Save" onclick="clearCanvas()"</span>
+            <span class="menubar_control"><input type="button" value="Load" onclick="clearCanvas()"</span>
+            <span class="menubar_control"><input type="button" value="Print" onclick="clearCanvas()"</span>
+            <span class="menubar_control"><input type="button" value="Copy" onclick="clearCanvas()"</span>
+            <span class="menubar_control"><input type="button" value="Cut" onclick="clearCanvas()"</span>
+            <span class="menubar_control"><input type="button" value="Paste" onclick="clearCanvas()"</span>
+            <span class="menubar_control"><input type="button" value="Images" onclick="clearCanvas()"</span>
+        </div>
+
+		<div id="controls_toolbar">
+	    	<span class="toolbar_control"><strong>Drawing Tool: </strong><span id="drawing_tool"></span></span>
+            <span class="toolbar_control"><select id="shapeSelect">
+                <option value="Selection" selected="selected">Selection</option>
+                <option value="Line">Line</option>
+                <option value="Rectangle">Rectangle</option>
+                <option value="Circle">Circle</option>
+                <option value="Triangle">Triangle</option>
+            </select></span>
+
+            <span class="toolbar_control"><strong>Line Color: </strong><span id="line_color"></span></span>
+            <span class="toolbar_control"><input type="color" name="lineColor"></span></span>
+
+            <span class="toolbar_control"><strong>Line Width: </strong><span id="line_width"></span></span>
+            <span class="toolbar_control"><input type="text" name="lineWidth" value="1"</span>
+
+            <span class="toolbar_control"><input type="button" value="Clear" onclick="clearCanvas()"</span>
+            <span class="toolbar_control"><input type="button" value="Delete" onclick="deleteShape()"</span>
+            <span class="toolbar_control"><input type="button" value="Undo" onclick="undoAction()"</span>
+            <span class="toolbar_control"><input type="button" value="Redo" onclick="redoAction()"</span>
+        </div>
+        <canvas id="theCanvas"
+                onclick="processMouseClick(event)"
+                ondrag="processMouseDrag(event)"
+                onmousemove="updateMousePosition(event)">
+        </canvas>
+    </body>
+</html>

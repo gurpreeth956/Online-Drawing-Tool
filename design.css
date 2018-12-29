@@ -1,0 +1,132 @@
+body {
+    background-color: #BFEFFF;
+}
+
+h2 {
+    font-size: 18pt;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+span + span {
+    margin-left: 2px;
+}
+
+#menu_toolbar {
+	font-size: 16pt;
+	margin-top: 10px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+#menu_toolbar input[type="button"] {
+    background-color: white;
+    border-radius: 5mm;
+    font-size: 12pt;
+    font-weight: bold;
+    width: 80px;
+    height: 30px;
+}
+#menu_toolbar input[type="button"]:hover {
+    background-color: #42C0FB;
+    border-color: #104E8B;
+}
+#menu_toolbar input[type="button"]:active {
+    background-color: #1464F4;
+    border-color: black;
+}
+#menu_toolbar input[type="button"]:focus {
+    outline: 0;
+}
+
+#controls_toolbar {
+	font-size: 16pt;
+	margin-top: 10px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+#controls_toolbar #shapeSelect {
+    background-color: white;
+    border-radius: 5mm;
+    font-size: 12pt;
+    width: 100px;
+    height: 30px;
+    margin-right: 20px;
+}
+#controls_toolbar #shapeSelect:hover {
+    background-color: #42C0FB;
+    border-color: #104E8B;
+}
+#controls_toolbar #shapeSelect:active {
+    background-color: #1464F4;
+    border-color: black;
+}
+#controls_toolbar #shapeSelect:focus {
+    outline: 0;
+}
+#controls_toolbar input[type="button"] {
+    background-color: white;
+    border-radius: 5mm;
+    font-size: 12pt;
+    font-weight: bold;
+    width: 80px;
+    height: 30px;
+}
+#controls_toolbar input[type="button"]:hover {
+    background-color: #42C0FB;
+    border-color: #104E8B;
+}
+#controls_toolbar input[type="button"]:active {
+    background-color: #1464F4;
+    border-color: black;
+}
+#controls_toolbar input[type="button"]:focus {
+    outline: 0;
+}
+#controls_toolbar input[type="text"] {
+    background-color: white;
+    border-radius: 5mm;
+    font-size: 12pt;
+    width: 40px;
+    height: 30px;
+    margin-right: 20px;
+    padding-left: 10px;
+}
+#controls_toolbar input[type="text"]:hover {
+    background-color: #42C0FB;
+    border-color: #104E8B;
+}
+#controls_toolbar input[type="text"]:active {
+    background-color: #1464F4;
+    border-color: black;
+}
+#controls_toolbar input[type="text"]:focus {
+    outline: 0;
+}
+#controls_toolbar input[type="color"] {
+    background-color: white;
+    border-radius: 5mm;
+    font-size: 12pt;
+    width: 40px;
+    height: 25px;
+    margin-right: 20px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+#controls_toolbar input[type="color"]:hover {
+    background-color: #42C0FB;
+    border-color: #104E8B;
+}
+#controls_toolbar input[type="color"]:active {
+    background-color: #1464F4;
+    border-color: black;
+}
+#controls_toolbar input[type="color"]:focus {
+    outline: 0;
+}
+
+#theCanvas {
+    background-color: white;
+    border: 1px solid black;
+    height: 100%;
+    width: 100%;
+}
