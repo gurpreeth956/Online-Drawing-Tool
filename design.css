@@ -37,6 +37,11 @@ span + span {
 #menu_toolbar input[type="button"]:focus {
     outline: 0;
 }
+#menu_toolbar input[type="button"]:disabled {
+    background-color: #CCCCCC;
+    border-color: transparent;
+    color: #666666;
+}
 
 #controls_toolbar {
 	font-size: 16pt;
@@ -81,6 +86,11 @@ span + span {
 }
 #controls_toolbar input[type="button"]:focus {
     outline: 0;
+}
+#controls_toolbar input[type="button"]:disabled {
+    background-color: #CCCCCC;
+    border-color: transparent;
+    color: #666666;
 }
 #controls_toolbar input[type="text"] {
     background-color: white;
