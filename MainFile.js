@@ -8,16 +8,31 @@ var canvas;
 var gc;
 var canvasWidth;
 var canvasHeight;
+var scaleX;
+var scaleY;
 var mouseX;
 var mouseY;
+var mouseXClick;
+var mouseYClick;
+var isMouseDown;
 var shapeArray;
 var shapeArrayPointer;
+var undoRedoArray;
 
 
 // LOCATION CLASS
 function Location(initX, initY) {
     this.x = initX;
     this.y = initY;
+}
+
+// SHAPE CLASS
+function Shape(initType, initX, initY, initFillColor, initLineColor) {
+    this.type = initType;
+    this.x = initX;
+    this.y = initY;
+    this.fillColor = initFillColor;
+    this.lineColor = initLineColor;
 }
 
 // FOR INITIATING THE PROGRAM
@@ -40,20 +55,24 @@ function init() {
 
     // INITIALIZE NECESSARY VARIABLES
     shapeArray = new Array();
+    undoRedoArray = new Array();
     shapeArrayPointer = 0;
+    isMouseDown = false;
+
+    // NECESSARY METHODS
 }
 
 // FOR UPDATING IMPORTANT FEATURES
 function updateAll() {
     // FOOLPROOF DESIGN FOR UNDO BUTTON
-    if (shapeArrayPointer > 0) {
+    if (shapeArray.length > 0) {
         document.getElementById('undo').disabled = false;
     } else {
         document.getElementById('undo').disabled = true;
     }
 
     // FOOLPROOF DESIGN FOR REDO BUTTON
-    if (shapeArrayPointer < shapeArray.length - 1) {
+    if (undoRedoArray.length > 0) {
         document.getElementById('redo').disabled = false;
     } else {
         document.getElementById('redo').disabled = true;
@@ -62,27 +81,92 @@ function updateAll() {
 
 // FOR UPDATING MOUSE CLICKS
 function processMouseClick(event) {
-    updateAll();
+    updateMouseClickPosition(event);
+    updateMousePosition(event);
+    var location = new Location(mouseX, mouseY);
+    //need to fix to make sure shape is added
+    shapeArrayPointer++;
 }
 
 // FOR UPDATING MOUSE DRAGS
 function processMouseDrag(event) {
+    // GET NECESSARY DATA USING ID
+    var selectionTool = $('#shapeSelect');
+    var selectionToolValue = selectionTool.val();
+    var fillColor = $('#fillColorChoice');
+    var fillColorValue = fillColor.val();
+    var lineColor = $('#lineColorChoice');
+    var lineColorValue = lineColor.val();
+
+    // NOW TO DO ACTION BASED ON SELECTION
+    if (selectionToolValue === 'Selection') {
+        
+    } else if (selectionToolValue === 'Line') {
+        
+    } else if (selectionToolValue === 'Rectangle') {
+        const rectShape = new Shape('Rectangle', mouseXClick, mouseYClick, fillColorValue, lineColorValue)
+        rectShape.width = mouseX - mouseXClick;
+        rectShape.height = mouseY - mouseYClick;
+        shapeArray[shapeArrayPointer] = rectShape;
+        //gc.beginPath();
+        //gc.fillRect(mouseXClick, mouseYClick, mouseX - mouseXClick, mouseY - mouseYClick);
+        //gc.rect(mouseXClick, mouseYClick, mouseX - mouseXClick, mouseY - mouseYClick);
+        //gc.stroke();
+    } else if (selectionToolValue === 'Circle') {
+        
+    } else if (selectionToolValue === 'Triangle') {
+        
+    }
+    render();
+
     updateAll();
 }
 
 // FOR UPDATING MOUSE MOVEMENTS
 function updateMousePosition(event) {
     var rect = canvas.getBoundingClientRect();
-    mouseX = event.clientX - rect.left;
-    mouseY = event.clientY - rect.top;
-    render();
+    scaleX = canvas.width / rect.width;
+    scaleY = canvas.height / rect.height;
+    mouseX = (event.clientX - rect.left) * scaleX;
+    mouseY = (event.clientY - rect.top) * scaleY;
+
+    // FOR MOUSE DRAGGING
+    document.onmousedown = function() { isMouseDown = true };
+    document.onmouseup = function() { isMouseDown = false };
+    document.onmousemove = function() { 
+        if (isMouseDown) {
+            mouseX = (event.clientX - rect.left) * scaleX;
+            mouseY = (event.clientY - rect.top) * scaleY;
+            processMouseDrag(event);
+        }
+    }
 
     updateAll();
 }
 
+// FOR UPDATING MOUSE CLICK POSITION
+function updateMouseClickPosition(event) {
+    var rect = canvas.getBoundingClientRect();
+    scaleX = canvas.width / rect.width;
+    scaleY = canvas.height / rect.height;
+    mouseXClick = (event.clientX - rect.left) * scaleX;
+    mouseYClick = (event.clientY - rect.top) * scaleY;
+}
+
 // FOR RENDERING THE CANVAS
 function render() {
-    //clearCanvas();
+    clearCanvas();
+    for (var i = 0; i < shapeArray.length; i++) {
+        var currentValue = shapeArray[i];
+        if (currentValue.type === 'Rectangle') {
+            gc.fillStyle = currentValue.fillColor;
+            gc.strokeStyle = currentValue.lineColor;
+            gc.beginPath();
+            gc.fillRect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
+            gc.rect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
+            gc.stroke();
+        }
+    }
 }
 
 // FOR CLEARING THE CANVAS
@@ -98,13 +182,17 @@ function deleteShape() {
 
 // FOR UNDOING AN ACTION
 function undoAction() {
+    undoRedoArray.push(shapeArray.pop());
     shapeArrayPointer--;
+    render();
     updateAll();
 }
 
 // FOR REDOING AN ACTION
 function redoAction() {
+    shapeArray.push(undoRedoArray.pop());
     shapeArrayPointer++;
+    render();
     updateAll();
 }
 
