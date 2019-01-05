@@ -29,7 +29,6 @@
                 <option value="Line">Line</option>
                 <option value="Rectangle">Rectangle</option>
                 <option value="Circle">Circle</option>
-                <option value="Triangle">Triangle</option>
             </select></span>
 
             <span class="toolbar_control"><strong>Fill Color: </strong><span id="fill_color"></span></span>
@@ -40,7 +39,7 @@
             <span class="toolbar_control"><strong>Line Width: </strong><span id="line_width"></span></span>
             <span class="toolbar_control"><input type="text" id="lineWidthChoice" name="lineWidth" value="1" onkeypress="return isNumber(event)"/></span>
 
-            <span class="toolbar_control"><input type="button" id="clear" value="Clear" onclick="clearCanvas()"/></span>
+            <span class="toolbar_control"><input type="button" id="clear" value="Clear" onclick="clearAll()"/></span>
             <span class="toolbar_control"><input type="button" id="delete" value="Delete" onclick="deleteShape()"/></span>
             <span class="toolbar_control"><input type="button" id="undo" value="Undo" onclick="undoAction()"/></span>
             <span class="toolbar_control"><input type="button" id="redo" value="Redo" onclick="redoAction()"/></span>
