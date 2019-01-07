@@ -19,6 +19,8 @@ var realMouseY;
 var isMouseDown;
 var wasAClick;
 var clickOnCanvas;
+var selectedShape;
+var selectedShapeIndex;
 var shapeArray;
 var shapeArrayPointer;
 var undoRedoArray;
@@ -31,13 +33,14 @@ function Location(initX, initY) {
 }
 
 // SHAPE CLASS
-function Shape(initType, initX, initY, initFillColor, initLineColor, initLineWidth) {
+function Shape(initType, initX, initY, initFillColor, initLineColor, initLineWidth, initSelect) {
     this.type = initType;
     this.x = initX;
     this.y = initY;
     this.fillColor = initFillColor;
     this.lineColor = initLineColor;
     this.lineWidth = initLineWidth;
+    this.selected = initSelect;
 }
 
 // FOR INITIATING THE PROGRAM
@@ -91,11 +94,24 @@ function processMouseClick(event) {
     updateMouseClickPosition(event);
     updateMousePosition(event);
     var location = new Location(mouseX, mouseY);
-    //need to fix to make sure shape is added
-    if (!wasAClick) {
+    
+    // REMOVE SELECTED OUTLINE
+    var selectionTool = $('#shapeSelect');
+    var selectionToolValue = selectionTool.val();
+    if (selectionToolValue === 'Selection') {
+        var currentValue = shapeArray[++selectedShapeIndex];
+        currentValue.selected = false;
+    }
+
+    // NOW ADD TO ARRAY 
+    // need to remove selection once it is added as an undoable event !!!!!
+    if (!wasAClick && !(selectionToolValue === 'Selection')) {
         shapeArrayPointer++;
         wasAClick = true;
     }
+
+    render();
+    updateAll();
 }
 
 // FOR UPDATING MOUSE DRAGS
@@ -116,19 +132,19 @@ function processMouseDrag(event) {
     
     // NOW TO DO ACTION BASED ON SELECTION
     if (selectionToolValue === 'Selection') {
-        
+        var currentValue = shapeArray[selectedShapeIndex];
     } else if (selectionToolValue === 'Line') {
-        const lineShape = new Shape('Line', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue);
+        const lineShape = new Shape('Line', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false);
         lineShape.newX = mouseX;
         lineShape.newY = mouseY;
         shapeArray[shapeArrayPointer] = lineShape;
     } else if (selectionToolValue === 'Rectangle') {
-        const rectShape = new Shape('Rectangle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue);
+        const rectShape = new Shape('Rectangle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false);
         rectShape.width = mouseX - mouseXClick;
         rectShape.height = mouseY - mouseYClick;
         shapeArray[shapeArrayPointer] = rectShape;
     } else if (selectionToolValue === 'Circle') {
-        const arcShape = new Shape('Circle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue);
+        const arcShape = new Shape('Circle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false);
         var xDist = mouseX - mouseXClick;
         var yDist = mouseY - mouseYClick;
         var hyp2 = (Math.pow(xDist, 2)) + (Math.pow(yDist, 2));
@@ -138,8 +154,8 @@ function processMouseDrag(event) {
         arcShape.endAngle = 2 * Math.PI;
         shapeArray[shapeArrayPointer] = arcShape;
     }
-    render();
 
+    render();
     updateAll();
 }
 
@@ -163,8 +179,6 @@ function updateMousePosition(event) {
             //}
         }
     }
-
-    updateAll();
 }
 
 // FOR UPDATING MOUSE CLICK POSITION
@@ -175,32 +189,84 @@ function updateMouseClickPosition(event) {
     mouseXClick = (event.clientX - rect.left) * scaleX;
     mouseYClick = (event.clientY - rect.top) * scaleY;
 
-    /*var rect = canvas.getBoundingClientRect();
-    realMouseX = e.pageX;
-    realMouseY = e.pageY;
-
-    if (realMouseX <= rect.left) {
-        mouseXClick = rect.left;
-    }
-    if (realMouseX >= rect.right) {
-        mouseXClick = rect.right;
-    }
-    if (realMouseY <= rect.top) {
-        mouseYClick = rect.top;
-    }
-    if (realMouseY >= rect.bottom) {
-        mouseYClick = rect.bottom;
-    }*/
-    
-    /*$(function() {
-        $('body').click(function(e) {
-            if (e.target.id === 'theCanvas' || $(e.target).parents('#theCanvas').length) {
-                clickOnCanvas = true;
-            } else {
-                clickOnCanvas = false;
+    // IF SELECTION TOOL IS SELECTED
+    var selectionTool = $('#shapeSelect');
+    var selectionToolValue = selectionTool.val();
+    if (selectionToolValue === 'Selection') {
+        selectedShapeIndex = shapeArrayPointer - 1;
+        var selectedShapeFound = false;
+        
+        // LOOP TO FIND LAST SHAPE THAT CONTAINS POINTS
+        while (!selectedShapeFound && selectedShapeIndex >= 0 && shapeArray.length != 0) {
+            var currentValue = shapeArray[selectedShapeIndex];
+            if (currentValue.type === 'Line') {
+                var lineSlope = (currentValue.newY - currentValue.y) / (currentValue.newX - currentValue.x);
+                var pointSlope = (mouseYClick - currentValue.y) / (mouseXClick - currentValue.x);
+                var difference = Math.abs(lineSlope - pointSlope);
+                if ((difference <= 0.2)) {
+                    if (currentValue.newX >= currentValue.x && currentValue.newY >= currentValue.y) {
+                        if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.newX &&
+                            currentValue.y <= mouseYClick && mouseYClick <= currentValue.newY) {
+                                selectedShapeFound = true;
+                                currentValue.selected = true;
+                        }
+                    } else if (currentValue.newX < currentValue.x && currentValue.newY >= currentValue.y) {
+                        if (currentValue.x >= mouseXClick && mouseXClick >= currentValue.newX &&
+                            currentValue.y <= mouseYClick && mouseYClick <= currentValue.newY) {
+                                selectedShapeFound = true;
+                                currentValue.selected = true;
+                        }
+                    } else if (currentValue.newX < currentValue.x && currentValue.newY < currentValue.y) {
+                        if (currentValue.x >= mouseXClick && mouseXClick >= currentValue.newX &&
+                            currentValue.y >= mouseYClick && mouseYClick >= currentValue.newY) {
+                                selectedShapeFound = true;
+                                currentValue.selected = true;
+                        }
+                    } else {
+                        if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.newX &&
+                            currentValue.y >= mouseYClick && mouseYClick >= currentValue.newY) {
+                                selectedShapeFound = true;
+                                currentValue.selected = true;
+                        }
+                    }
+                }
+            } else if (currentValue.type === 'Rectangle') {
+                if (currentValue.width >= 0 && currentValue.height >= 0) {
+                    if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.x + currentValue.width &&
+                        currentValue.y <= mouseYClick && mouseYClick <= currentValue.y + currentValue.height) {
+                            selectedShapeFound = true;
+                            currentValue.selected = true;
+                    }
+                } else if (currentValue.width >= 0 && currentValue.height < 0) {
+                    if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.x + currentValue.width &&
+                        currentValue.y  + currentValue.height <= mouseYClick && mouseYClick <= currentValue.y) {
+                            selectedShapeFound = true;
+                            currentValue.selected = true;
+                    }
+                } else if (currentValue.width < 0 && currentValue.height >= 0) {
+                    if (currentValue.x + currentValue.width <= mouseXClick && mouseXClick <= currentValue.x &&
+                        currentValue.y <= mouseYClick && mouseYClick <= currentValue.y + currentValue.height) {
+                            selectedShapeFound = true;
+                            currentValue.selected = true;
+                    }
+                } else {
+                    if (currentValue.x + currentValue.width <= mouseXClick && mouseXClick <= currentValue.x &&
+                        currentValue.y + currentValue.height <= mouseYClick && mouseYClick <= currentValue.y) {
+                            selectedShapeFound = true;
+                            currentValue.selected = true;
+                    }
+                }
+            } else if (currentValue.type === 'Circle') {
+                var dist = Math.sqrt(Math.pow(mouseXClick - currentValue.x, 2) + Math.pow(mouseYClick - currentValue.y, 2))
+                if (dist <= currentValue.radius) {
+                    selectedShapeFound = true;
+                    currentValue.selected = true;
+                }
             }
-        });
-    });*/
+            selectedShapeIndex--;
+            render(); //need to remove
+        }
+    }
 }
 
 // FOR RENDERING THE CANVAS
@@ -210,29 +276,64 @@ function render() {
         var currentValue = shapeArray[i];
         if (currentValue.type === 'Selection') {
 
-        } else if (currentValue.type === 'Line'){
-            gc.strokeStyle = currentValue.lineColor;
-            gc.beginPath();
-            gc.moveTo(currentValue.x, currentValue.y);
-            gc.lineTo(currentValue.newX, currentValue.newY);
-            gc.lineWidth = currentValue.lineWidth;
-            gc.stroke();
+        } else if (currentValue.type === 'Line') {
+            if (currentValue.selected) {
+                gc.strokeStyle = '#0dd5fc';
+                gc.setLineDash([5, 4]);
+                gc.beginPath();
+                gc.moveTo(currentValue.x, currentValue.y);
+                gc.lineTo(currentValue.newX, currentValue.newY);
+                gc.lineWidth = currentValue.lineWidth * 2;
+                gc.stroke();
+            } else {
+                gc.strokeStyle = currentValue.lineColor;
+                gc.setLineDash([0, 0]);
+                gc.beginPath();
+                gc.moveTo(currentValue.x, currentValue.y);
+                gc.lineTo(currentValue.newX, currentValue.newY);
+                gc.lineWidth = currentValue.lineWidth;
+                gc.stroke();
+            }
         } else if (currentValue.type === 'Rectangle') {
-            gc.fillStyle = currentValue.fillColor;
-            gc.strokeStyle = currentValue.lineColor;
-            gc.beginPath();
-            gc.fillRect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
-            gc.rect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
-            gc.lineWidth = currentValue.lineWidth;
-            gc.stroke();
+            if (currentValue.selected) {
+                gc.fillStyle = currentValue.fillColor;
+                gc.strokeStyle = '#0dd5fc';
+                gc.setLineDash([5, 4]);
+                gc.beginPath();
+                gc.fillRect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
+                gc.rect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
+                gc.lineWidth = currentValue.lineWidth * 2;
+                gc.stroke();
+            } else {
+                gc.fillStyle = currentValue.fillColor;
+                gc.strokeStyle = currentValue.lineColor;
+                gc.setLineDash([0, 0]);
+                gc.beginPath();
+                gc.fillRect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
+                gc.rect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
+                gc.lineWidth = currentValue.lineWidth;
+                gc.stroke();
+            }
         } else if (currentValue.type === 'Circle') {
-            gc.fillStyle = currentValue.fillColor;
-            gc.strokeStyle = currentValue.lineColor;
-            gc.beginPath();
-            gc.arc(currentValue.x, currentValue.y, currentValue.radius, currentValue.startAngle, currentValue.endAngle);
-            gc.lineWidth = currentValue.lineWidth;
-            gc.stroke();
-            gc.fill();
+            if (currentValue.selected) {
+                gc.fillStyle = currentValue.fillColor;
+                gc.strokeStyle = '#0dd5fc';
+                gc.setLineDash([5, 4]);
+                gc.beginPath();
+                gc.arc(currentValue.x, currentValue.y, currentValue.radius, currentValue.startAngle, currentValue.endAngle);
+                gc.lineWidth = currentValue.lineWidth * 2;
+                gc.stroke();
+                gc.fill();
+            } else {
+                gc.fillStyle = currentValue.fillColor;
+                gc.strokeStyle = currentValue.lineColor;
+                gc.setLineDash([0, 0]);
+                gc.beginPath();
+                gc.arc(currentValue.x, currentValue.y, currentValue.radius, currentValue.startAngle, currentValue.endAngle);
+                gc.lineWidth = currentValue.lineWidth;
+                gc.stroke();
+                gc.fill();
+            }
         }
     }
 }
