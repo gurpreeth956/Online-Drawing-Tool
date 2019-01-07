@@ -19,6 +19,7 @@ var realMouseY;
 var isMouseDown;
 var wasAClick;
 var clickOnCanvas;
+var cleared;
 var selectedShape;
 var selectedShapeIndex;
 var shapeArray;
@@ -33,14 +34,16 @@ function Location(initX, initY) {
 }
 
 // SHAPE CLASS
-function Shape(initType, initX, initY, initFillColor, initLineColor, initLineWidth, initSelect) {
-    this.type = initType;
-    this.x = initX;
-    this.y = initY;
-    this.fillColor = initFillColor;
-    this.lineColor = initLineColor;
-    this.lineWidth = initLineWidth;
-    this.selected = initSelect;
+function Shape(initType, initX, initY, initFillColor, initLineColor, initLineWidth, initSelect, initDraw, initDeletion) {
+    this.type = initType; // SHAPE TYPE
+    this.x = initX; // STARTING X
+    this.y = initY; // STARTING Y
+    this.fillColor = initFillColor; // FILL COLOR
+    this.lineColor = initLineColor; // LINE COLOR
+    this.lineWidth = initLineWidth; // LINE WIDTH
+    this.selected = initSelect; // IF SELECTED
+    this.deletion = initDeletion; // IF DELETION
+    this.draw = initDraw; // HELPER FOR DELETION
 }
 
 // FOR INITIATING THE PROGRAM
@@ -57,6 +60,7 @@ function init() {
     document.getElementById('copy').disabled = true;
     document.getElementById('cut').disabled = true;
     document.getElementById('paste').disabled = true;
+    document.getElementById('clear').disabled = true;
     document.getElementById('delete').disabled = true;
     document.getElementById('undo').disabled = true;
     document.getElementById('redo').disabled = true;
@@ -65,11 +69,15 @@ function init() {
     shapeArray = new Array();
     undoRedoArray = new Array();
     shapeArrayPointer = 0;
+    selectedShapeIndex = -1;
     isMouseDown = false;
     wasAClick = true;
     clickOnCanvas = false;
+    cleared = true;
+    selectedShape = new Shape(null, null, null, null, null, null , null, null, null);
 
     // NECESSARY METHODS
+    updateAll();
 }
 
 // FOR UPDATING IMPORTANT FEATURES
@@ -87,6 +95,27 @@ function updateAll() {
     } else {
         document.getElementById('redo').disabled = true;
     }
+
+    // FOOLPROOF DESIGN FOR CLEAR BUTTON
+    if (cleared) {
+        document.getElementById('clear').disabled = true;
+    } else {
+        document.getElementById('clear').disabled = false;
+    }
+
+    // FOOLPROOF DESIGN FOR DELETE BUTTON
+    var selectionTool = $('#shapeSelect');
+    var selectionToolValue = selectionTool.val();
+    if (selectedShapeIndex >= 0 && selectionToolValue === 'Selection') {
+        document.getElementById('delete').disabled = false;
+    } else {
+        document.getElementById('delete').disabled = true;
+    }
+
+    // FOOLPROOF DESIGN FOR SELECTION
+    if (!(selectionToolValue === 'Selection')) {
+        selectedShape.selected = false;
+    }
 }
 
 // FOR UPDATING MOUSE CLICKS
@@ -100,7 +129,6 @@ function processMouseClick(event) {
     var selectionToolValue = selectionTool.val();
     if (selectionToolValue === 'Selection') {
         var currentValue = shapeArray[++selectedShapeIndex];
-        currentValue.selected = false;
     }
 
     // NOW ADD TO ARRAY 
@@ -108,6 +136,7 @@ function processMouseClick(event) {
     if (!wasAClick && !(selectionToolValue === 'Selection')) {
         shapeArrayPointer++;
         wasAClick = true;
+        cleared = false;
     }
 
     render();
@@ -134,17 +163,17 @@ function processMouseDrag(event) {
     if (selectionToolValue === 'Selection') {
         var currentValue = shapeArray[selectedShapeIndex];
     } else if (selectionToolValue === 'Line') {
-        const lineShape = new Shape('Line', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false);
+        const lineShape = new Shape('Line', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false);
         lineShape.newX = mouseX;
         lineShape.newY = mouseY;
         shapeArray[shapeArrayPointer] = lineShape;
     } else if (selectionToolValue === 'Rectangle') {
-        const rectShape = new Shape('Rectangle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false);
+        const rectShape = new Shape('Rectangle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false);
         rectShape.width = mouseX - mouseXClick;
         rectShape.height = mouseY - mouseYClick;
         shapeArray[shapeArrayPointer] = rectShape;
     } else if (selectionToolValue === 'Circle') {
-        const arcShape = new Shape('Circle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false);
+        const arcShape = new Shape('Circle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false);
         var xDist = mouseX - mouseXClick;
         var yDist = mouseY - mouseYClick;
         var hyp2 = (Math.pow(xDist, 2)) + (Math.pow(yDist, 2));
@@ -155,6 +184,7 @@ function processMouseDrag(event) {
         shapeArray[shapeArrayPointer] = arcShape;
     }
 
+    cleared = false;
     render();
     updateAll();
 }
@@ -195,38 +225,45 @@ function updateMouseClickPosition(event) {
     if (selectionToolValue === 'Selection') {
         selectedShapeIndex = shapeArrayPointer - 1;
         var selectedShapeFound = false;
+        selectedShape.selected = false;
         
         // LOOP TO FIND LAST SHAPE THAT CONTAINS POINTS
         while (!selectedShapeFound && selectedShapeIndex >= 0 && shapeArray.length != 0) {
             var currentValue = shapeArray[selectedShapeIndex];
             if (currentValue.type === 'Line') {
                 var lineSlope = (currentValue.newY - currentValue.y) / (currentValue.newX - currentValue.x);
-                var pointSlope = (mouseYClick - currentValue.y) / (mouseXClick - currentValue.x);
-                var difference = Math.abs(lineSlope - pointSlope);
-                if ((difference <= 0.2)) {
+                var pointSlope1 = (mouseYClick - currentValue.y) / (mouseXClick - currentValue.x);
+                var pointSlope2 = (mouseYClick - currentValue.newY) / (mouseXClick - currentValue.newX);
+                var difference1 = Math.abs(lineSlope - pointSlope1);
+                var difference2 = Math.abs(lineSlope - pointSlope2);
+                if (difference1 <= 0.1 || difference2 <= 0.1) {
                     if (currentValue.newX >= currentValue.x && currentValue.newY >= currentValue.y) {
                         if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.newX &&
                             currentValue.y <= mouseYClick && mouseYClick <= currentValue.newY) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
+                                selectedShape = currentValue;
                         }
                     } else if (currentValue.newX < currentValue.x && currentValue.newY >= currentValue.y) {
                         if (currentValue.x >= mouseXClick && mouseXClick >= currentValue.newX &&
                             currentValue.y <= mouseYClick && mouseYClick <= currentValue.newY) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
+                                selectedShape = currentValue;
                         }
                     } else if (currentValue.newX < currentValue.x && currentValue.newY < currentValue.y) {
                         if (currentValue.x >= mouseXClick && mouseXClick >= currentValue.newX &&
                             currentValue.y >= mouseYClick && mouseYClick >= currentValue.newY) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
+                                selectedShape = currentValue;
                         }
                     } else {
                         if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.newX &&
                             currentValue.y >= mouseYClick && mouseYClick >= currentValue.newY) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
+                                selectedShape = currentValue;
                         }
                     }
                 }
@@ -236,24 +273,28 @@ function updateMouseClickPosition(event) {
                         currentValue.y <= mouseYClick && mouseYClick <= currentValue.y + currentValue.height) {
                             selectedShapeFound = true;
                             currentValue.selected = true;
+                            selectedShape = currentValue;
                     }
                 } else if (currentValue.width >= 0 && currentValue.height < 0) {
                     if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.x + currentValue.width &&
                         currentValue.y  + currentValue.height <= mouseYClick && mouseYClick <= currentValue.y) {
                             selectedShapeFound = true;
                             currentValue.selected = true;
+                            selectedShape = currentValue;
                     }
                 } else if (currentValue.width < 0 && currentValue.height >= 0) {
                     if (currentValue.x + currentValue.width <= mouseXClick && mouseXClick <= currentValue.x &&
                         currentValue.y <= mouseYClick && mouseYClick <= currentValue.y + currentValue.height) {
                             selectedShapeFound = true;
                             currentValue.selected = true;
+                            selectedShape = currentValue;
                     }
                 } else {
                     if (currentValue.x + currentValue.width <= mouseXClick && mouseXClick <= currentValue.x &&
                         currentValue.y + currentValue.height <= mouseYClick && mouseYClick <= currentValue.y) {
                             selectedShapeFound = true;
                             currentValue.selected = true;
+                            selectedShape = currentValue;
                     }
                 }
             } else if (currentValue.type === 'Circle') {
@@ -261,6 +302,7 @@ function updateMouseClickPosition(event) {
                 if (dist <= currentValue.radius) {
                     selectedShapeFound = true;
                     currentValue.selected = true;
+                    selectedShape = currentValue;
                 }
             }
             selectedShapeIndex--;
@@ -274,65 +316,67 @@ function render() {
     clearCanvas(); // remove this for matrix functions
     for (var i = 0; i < shapeArray.length; i++) {
         var currentValue = shapeArray[i];
-        if (currentValue.type === 'Selection') {
+        if (currentValue.draw) {
+            if (currentValue.type === 'Selection') {
 
-        } else if (currentValue.type === 'Line') {
-            if (currentValue.selected) {
-                gc.strokeStyle = '#0dd5fc';
-                gc.setLineDash([5, 4]);
-                gc.beginPath();
-                gc.moveTo(currentValue.x, currentValue.y);
-                gc.lineTo(currentValue.newX, currentValue.newY);
-                gc.lineWidth = currentValue.lineWidth * 2;
-                gc.stroke();
-            } else {
-                gc.strokeStyle = currentValue.lineColor;
-                gc.setLineDash([0, 0]);
-                gc.beginPath();
-                gc.moveTo(currentValue.x, currentValue.y);
-                gc.lineTo(currentValue.newX, currentValue.newY);
-                gc.lineWidth = currentValue.lineWidth;
-                gc.stroke();
-            }
-        } else if (currentValue.type === 'Rectangle') {
-            if (currentValue.selected) {
-                gc.fillStyle = currentValue.fillColor;
-                gc.strokeStyle = '#0dd5fc';
-                gc.setLineDash([5, 4]);
-                gc.beginPath();
-                gc.fillRect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
-                gc.rect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
-                gc.lineWidth = currentValue.lineWidth * 2;
-                gc.stroke();
-            } else {
-                gc.fillStyle = currentValue.fillColor;
-                gc.strokeStyle = currentValue.lineColor;
-                gc.setLineDash([0, 0]);
-                gc.beginPath();
-                gc.fillRect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
-                gc.rect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
-                gc.lineWidth = currentValue.lineWidth;
-                gc.stroke();
-            }
-        } else if (currentValue.type === 'Circle') {
-            if (currentValue.selected) {
-                gc.fillStyle = currentValue.fillColor;
-                gc.strokeStyle = '#0dd5fc';
-                gc.setLineDash([5, 4]);
-                gc.beginPath();
-                gc.arc(currentValue.x, currentValue.y, currentValue.radius, currentValue.startAngle, currentValue.endAngle);
-                gc.lineWidth = currentValue.lineWidth * 2;
-                gc.stroke();
-                gc.fill();
-            } else {
-                gc.fillStyle = currentValue.fillColor;
-                gc.strokeStyle = currentValue.lineColor;
-                gc.setLineDash([0, 0]);
-                gc.beginPath();
-                gc.arc(currentValue.x, currentValue.y, currentValue.radius, currentValue.startAngle, currentValue.endAngle);
-                gc.lineWidth = currentValue.lineWidth;
-                gc.stroke();
-                gc.fill();
+            } else if (currentValue.type === 'Line') {
+                if (currentValue.selected) {
+                    gc.strokeStyle = '#0dd5fc';
+                    gc.setLineDash([5, 4]);
+                    gc.beginPath();
+                    gc.moveTo(currentValue.x, currentValue.y);
+                    gc.lineTo(currentValue.newX, currentValue.newY);
+                    gc.lineWidth = currentValue.lineWidth * 2;
+                    gc.stroke();
+                } else {
+                    gc.strokeStyle = currentValue.lineColor;
+                    gc.setLineDash([0, 0]);
+                    gc.beginPath();
+                    gc.moveTo(currentValue.x, currentValue.y);
+                    gc.lineTo(currentValue.newX, currentValue.newY);
+                    gc.lineWidth = currentValue.lineWidth;
+                    gc.stroke();
+                }
+            } else if (currentValue.type === 'Rectangle') {
+                if (currentValue.selected) {
+                    gc.fillStyle = currentValue.fillColor;
+                    gc.strokeStyle = '#0dd5fc';
+                    gc.setLineDash([5, 4]);
+                    gc.beginPath();
+                    gc.fillRect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
+                    gc.rect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
+                    gc.lineWidth = currentValue.lineWidth * 2;
+                    gc.stroke();
+                    } else {
+                    gc.fillStyle = currentValue.fillColor;
+                    gc.strokeStyle = currentValue.lineColor;
+                    gc.setLineDash([0, 0]);
+                    gc.beginPath();
+                    gc.fillRect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
+                    gc.rect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
+                    gc.lineWidth = currentValue.lineWidth;
+                    gc.stroke();
+                }
+            } else if (currentValue.type === 'Circle') {
+                if (currentValue.selected) {
+                    gc.fillStyle = currentValue.fillColor;
+                    gc.strokeStyle = '#0dd5fc';
+                    gc.setLineDash([5, 4]);
+                    gc.beginPath();
+                    gc.arc(currentValue.x, currentValue.y, currentValue.radius, currentValue.startAngle, currentValue.endAngle);
+                    gc.lineWidth = currentValue.lineWidth * 2;
+                    gc.stroke();
+                    gc.fill();
+                } else {
+                    gc.fillStyle = currentValue.fillColor;
+                    gc.strokeStyle = currentValue.lineColor;
+                    gc.setLineDash([0, 0]);
+                    gc.beginPath();
+                    gc.arc(currentValue.x, currentValue.y, currentValue.radius, currentValue.startAngle, currentValue.endAngle);
+                    gc.lineWidth = currentValue.lineWidth;
+                    gc.stroke();
+                    gc.fill();
+                }
             }
         }
     }
@@ -346,32 +390,56 @@ function clearCanvas() {
 
 // FOR CLEARING BY CLEAR BUTTON
 function clearAll() {
-    const rectShape = new Shape('Rectangle', 0, 0, '#ffffff', '#ffffff', 1);
+    undoRedoArray = [];
+    const rectShape = new Shape('Rectangle', 0, 0, '#ffffff', '#ffffff', 1, false, true, false);
     rectShape.width = canvas.width;
-    rectShape.height = canvasHeight;;
+    rectShape.height = canvas.height;;
     shapeArray[shapeArrayPointer] = rectShape;
     shapeArrayPointer++;
+    cleared = true;
     render();
     updateAll();
 }
 
 // FOR DELETING SELECTED SHAPES
 function deleteShape() {
+    undoRedoArray = [];
+    var currentValue = shapeArray[selectedShapeIndex];
+    currentValue.indexofDeletion = ++shapeArrayPointer;
+    currentValue.deletion = true;
+    currentValue.draw = false;
+    shapeArray.push(currentValue);
+    cleared = false;
+    render();
     updateAll();
 }
 
 // FOR UNDOING AN ACTION
 function undoAction() {
-    undoRedoArray.push(shapeArray.pop());
+    var currentValue = shapeArray.pop();
+    undoRedoArray.push(currentValue);
+    if (currentValue.deletion) {
+        currentValue.draw = true;
+    }
+    selectedShape.selected = false;
     shapeArrayPointer--;
+    cleared = false;
     render();
     updateAll();
 }
 
 // FOR REDOING AN ACTION
 function redoAction() {
-    shapeArray.push(undoRedoArray.pop());
+    var currentValue = undoRedoArray.pop();
+    shapeArray.push(currentValue);
     shapeArrayPointer++;
+    if (currentValue.deletion) {
+        if (shapeArrayPointer == currentValue.indexofDeletion) {
+            currentValue.draw = false;
+        }
+    }
+    selectedShape.selected = false;
+    cleared = false;
     render();
     updateAll();
 }
