@@ -236,8 +236,26 @@ function updateMouseClickPosition(event) {
                 var pointSlope2 = (mouseYClick - currentValue.newY) / (mouseXClick - currentValue.newX);
                 var difference1 = Math.abs(lineSlope - pointSlope1);
                 var difference2 = Math.abs(lineSlope - pointSlope2);
-                if (difference1 <= 0.1 || difference2 <= 0.1) {
-                    if (currentValue.newX >= currentValue.x && currentValue.newY >= currentValue.y) {
+                var nearVertical1 = !isFinite(pointSlope1) || Math.abs(pointSlope1) > 20;
+                var nearVertical2 = !isFinite(pointSlope2) || Math.abs(pointSlope2) > 20;
+                var nearHorizontal1 = Math.abs(pointSlope1) < 0.1;
+                var nearHorizontal2 = Math.abs(pointSlope2) < 0.1;
+
+                // NOW TO FIND THE CURRENT CASE
+                if (difference1 <= 0.1 || difference2 <= 0.1 || nearVertical1 || nearVertical2) {
+                    if  (nearVertical1 || nearVertical2) {
+                        if (difference1 > 20 || difference2 > 20) {
+                            selectedShapeFound = true;
+                            currentValue.selected = true;
+                            selectedShape = currentValue;
+                        }
+                    } else if (nearHorizontal1 || nearHorizontal2) {
+                        if (difference1 < 0.1 || difference2 < 0.1) {
+                            selectedShapeFound = true;
+                            currentValue.selected = true;
+                            selectedShape = currentValue;
+                        }
+                    } else if (currentValue.newX >= currentValue.x && currentValue.newY >= currentValue.y) {
                         if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.newX &&
                             currentValue.y <= mouseYClick && mouseYClick <= currentValue.newY) {
                                 selectedShapeFound = true;
@@ -409,6 +427,7 @@ function deleteShape() {
     currentValue.deletion = true;
     currentValue.draw = false;
     shapeArray.push(currentValue);
+    selectedShapeIndex = -1;
     cleared = false;
     render();
     updateAll();
