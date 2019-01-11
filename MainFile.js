@@ -22,6 +22,7 @@ var clickOnCanvas;
 var cleared;
 var selectedShape;
 var selectedShapeIndex;
+var selectedShapeMoved;
 var shapeArray;
 var shapeArrayPointer;
 var undoRedoArray;
@@ -42,8 +43,8 @@ function Shape(initType, initX, initY, initFillColor, initLineColor, initLineWid
     this.lineColor = initLineColor; // LINE COLOR
     this.lineWidth = initLineWidth; // LINE WIDTH
     this.selected = initSelect; // IF SELECTED
-    this.deletion = initDeletion; // IF DELETION
     this.draw = initDraw; // HELPER FOR DELETION
+    this.deletion = initDeletion; // IF DELETION
 }
 
 // FOR INITIATING THE PROGRAM
@@ -74,6 +75,7 @@ function init() {
     wasAClick = true;
     clickOnCanvas = false;
     cleared = true;
+    selectedShapeMoved = false;
     selectedShape = new Shape(null, null, null, null, null, null , null, null, null);
 
     // NECESSARY METHODS
@@ -133,10 +135,11 @@ function processMouseClick(event) {
 
     // NOW ADD TO ARRAY 
     // need to remove selection once it is added as an undoable event !!!!!
-    if (!wasAClick && !(selectionToolValue === 'Selection')) {
+    if ((!wasAClick && !(selectionToolValue === 'Selection')) || selectedShapeMoved) {
         shapeArrayPointer++;
         wasAClick = true;
         cleared = false;
+        selectedShapeMoved = false;
     }
 
     render();
@@ -162,6 +165,31 @@ function processMouseDrag(event) {
     // NOW TO DO ACTION BASED ON SELECTION
     if (selectionToolValue === 'Selection') {
         var currentValue = shapeArray[selectedShapeIndex];
+        if (selectedShape != null) {
+            selectedShapeIndex++;
+            if (selectedShapeIndex >= 0 && selectedShapeIndex < shapeArray.length) {
+                var currentValue = shapeArray[selectedShapeIndex];
+                const moveShape = new Shape(currentValue.type, currentValue.x + (mouseX - mouseXClick), currentValue.y + (mouseY - mouseYClick), currentValue.fillColor, 
+                        currentValue.lineColor, currentValue.lineWidth, currentValue.selected, true, currentValue.deletion);
+                if (moveShape.type === 'Line') {
+                    moveShape.newX = currentValue.newX + (mouseX - mouseXClick);
+                    moveShape.newY = currentValue.newY + (mouseY - mouseYClick);
+                } else if (moveShape.type === 'Rectangle') {
+                    moveShape.width = currentValue.width;
+                    moveShape.height = currentValue.height;
+                } else if (moveShape.type === 'Circle') {
+                    moveShape.radius = currentValue.radius;
+                    moveShape.startAngle = currentValue.startAngle;
+                    moveShape.endAngle = currentValue.endAngle;
+                }
+                selectedShape.selected = false;
+                selectedShape = moveShape;
+                selectedShape.selected = true;
+                shapeArray[shapeArrayPointer] = moveShape;
+                selectedShapeMoved = true;
+            }
+            selectedShapeIndex--;
+        }
     } else if (selectionToolValue === 'Line') {
         const lineShape = new Shape('Line', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false);
         lineShape.newX = mouseX;
@@ -365,7 +393,7 @@ function render() {
                     gc.rect(currentValue.x, currentValue.y, currentValue.width, currentValue.height);
                     gc.lineWidth = currentValue.lineWidth * 2;
                     gc.stroke();
-                    } else {
+                } else {
                     gc.fillStyle = currentValue.fillColor;
                     gc.strokeStyle = currentValue.lineColor;
                     gc.setLineDash([0, 0]);
@@ -422,13 +450,15 @@ function clearAll() {
 // FOR DELETING SELECTED SHAPES
 function deleteShape() {
     undoRedoArray = [];
-    var currentValue = shapeArray[selectedShapeIndex];
-    currentValue.indexofDeletion = ++shapeArrayPointer;
-    currentValue.deletion = true;
-    currentValue.draw = false;
-    shapeArray.push(currentValue);
-    selectedShapeIndex = -1;
-    cleared = false;
+    if (selectedShapeIndex != -1) {
+        var currentValue = shapeArray[selectedShapeIndex];
+        currentValue.indexofDeletion = ++shapeArrayPointer;
+        currentValue.deletion = true;
+        currentValue.draw = false;
+        shapeArray.push(currentValue);
+        selectedShapeIndex = -1;
+        cleared = false;
+    }
     render();
     updateAll();
 }
