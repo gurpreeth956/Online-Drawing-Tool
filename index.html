@@ -24,7 +24,7 @@
 
 		<div id="controls_toolbar">
 	    	<span class="toolbar_control"><strong>Drawing Tool: </strong><span id="drawing_tool"></span></span>
-            <span class="toolbar_control"><select id="shapeSelect">
+            <span class="toolbar_control"><select id="shapeSelect" onchange="updateSelection()">
                 <option value="Selection" selected="selected">Selection</option>
                 <option value="Line">Line</option>
                 <option value="Rectangle">Rectangle</option>
@@ -32,12 +32,11 @@
             </select></span>
 
             <span class="toolbar_control"><strong>Fill Color: </strong><span id="fill_color"></span></span>
-            <span class="toolbar_control"><input type="color" id="fillColorChoice" name="fillColor" value="#ffffff"/></span></span>
+            <span class="toolbar_control"><input type="color" id="fillColorChoice" name="fillColor" value="#ffffff" onchange="updateShape()"/></span></span>
             <span class="toolbar_control"><strong>Line Color: </strong><span id="line_color"></span></span>
-            <span class="toolbar_control"><input type="color" id="lineColorChoice" name="lineColor"/></span></span>
-
+            <span class="toolbar_control"><input type="color" id="lineColorChoice" name="lineColor" onchange="updateShape()"/></span></span>
             <span class="toolbar_control"><strong>Line Width: </strong><span id="line_width"></span></span>
-            <span class="toolbar_control"><input type="text" id="lineWidthChoice" name="lineWidth" value="1" onkeypress="return isNumber(event)"/></span>
+            <span class="toolbar_control"><input type="text" id="lineWidthChoice" name="lineWidth" value="1" onkeypress="return isNumber(event)" onchange="updateShape()"/></span>
 
             <span class="toolbar_control"><input type="button" id="clear" value="Clear" onclick="clearAll()"/></span>
             <span class="toolbar_control"><input type="button" id="delete" value="Delete" onclick="deleteShape()"/></span>

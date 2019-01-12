@@ -35,7 +35,8 @@ function Location(initX, initY) {
 }
 
 // SHAPE CLASS
-function Shape(initType, initX, initY, initFillColor, initLineColor, initLineWidth, initSelect, initDraw, initDeletion) {
+function Shape(initType, initX, initY, initFillColor, initLineColor, initLineWidth, initSelect, initDraw, 
+        initDeletion, initMoved) {
     this.type = initType; // SHAPE TYPE
     this.x = initX; // STARTING X
     this.y = initY; // STARTING Y
@@ -45,6 +46,7 @@ function Shape(initType, initX, initY, initFillColor, initLineColor, initLineWid
     this.selected = initSelect; // IF SELECTED
     this.draw = initDraw; // HELPER FOR DELETION
     this.deletion = initDeletion; // IF DELETION
+    this.moved = initMoved; // IF MOVED
 }
 
 // FOR INITIATING THE PROGRAM
@@ -76,7 +78,7 @@ function init() {
     clickOnCanvas = false;
     cleared = true;
     selectedShapeMoved = false;
-    selectedShape = new Shape(null, null, null, null, null, null , null, null, null);
+    selectedShape = new Shape(null, null, null, null, null, null , null, null, null, null);
 
     // NECESSARY METHODS
     updateAll();
@@ -108,7 +110,7 @@ function updateAll() {
     // FOOLPROOF DESIGN FOR DELETE BUTTON
     var selectionTool = $('#shapeSelect');
     var selectionToolValue = selectionTool.val();
-    if (selectedShapeIndex >= 0 && selectionToolValue === 'Selection') {
+    if ((selectedShapeIndex >= 0 || !(selectedShape.type === null)) && selectionToolValue === 'Selection') {
         document.getElementById('delete').disabled = false;
     } else {
         document.getElementById('delete').disabled = true;
@@ -118,6 +120,28 @@ function updateAll() {
     if (!(selectionToolValue === 'Selection')) {
         selectedShape.selected = false;
     }
+}
+
+// FOR UPDATING AFTER TOOL CHANGE
+function updateSelection() {
+    var selectionTool = $('#shapeSelect');
+    var selectionToolValue = selectionTool.val();
+    if (!(selectionToolValue === 'Selection')) {
+        document.getElementById('delete').disabled = true;
+        selectedShape.selected = false;
+        render();
+    }
+}
+
+// FOR UPDATING SELECTED SHAPE STUFF
+function updateShape() {
+    var fillColor = $('#fillColorChoice');
+    selectedShape.fillColor = fillColor.val();
+    var lineColor = $('#lineColorChoice');
+    selectedShape.lineColor = lineColor.val();
+    var widthLine = $('#lineWidthChoice');
+    selectedShape.lineWidth = widthLine.val();
+    render();
 }
 
 // FOR UPDATING MOUSE CLICKS
@@ -130,7 +154,7 @@ function processMouseClick(event) {
     var selectionTool = $('#shapeSelect');
     var selectionToolValue = selectionTool.val();
     if (selectionToolValue === 'Selection') {
-        var currentValue = shapeArray[++selectedShapeIndex];
+        var currentValue = shapeArray[selectedShapeIndex];
     }
 
     // NOW ADD TO ARRAY 
@@ -169,8 +193,12 @@ function processMouseDrag(event) {
             selectedShapeIndex++;
             if (selectedShapeIndex >= 0 && selectedShapeIndex < shapeArray.length) {
                 var currentValue = shapeArray[selectedShapeIndex];
-                const moveShape = new Shape(currentValue.type, currentValue.x + (mouseX - mouseXClick), currentValue.y + (mouseY - mouseYClick), currentValue.fillColor, 
-                        currentValue.lineColor, currentValue.lineWidth, currentValue.selected, true, currentValue.deletion);
+                currentValue.draw = false;
+                const moveShape = new Shape(currentValue.type, currentValue.x + (mouseX - mouseXClick), currentValue.y + (mouseY - mouseYClick), 
+                        currentValue.fillColor, currentValue.lineColor, currentValue.lineWidth, currentValue.selected, true, currentValue.deletion, true);
+                moveShape.moveXDifference = mouseX - mouseXClick;
+                moveShape.moveYDifference = mouseY - mouseYClick;
+                moveShape.originalShapeIndex = selectedShapeIndex;
                 if (moveShape.type === 'Line') {
                     moveShape.newX = currentValue.newX + (mouseX - mouseXClick);
                     moveShape.newY = currentValue.newY + (mouseY - mouseYClick);
@@ -191,17 +219,17 @@ function processMouseDrag(event) {
             selectedShapeIndex--;
         }
     } else if (selectionToolValue === 'Line') {
-        const lineShape = new Shape('Line', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false);
+        const lineShape = new Shape('Line', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false, false);
         lineShape.newX = mouseX;
         lineShape.newY = mouseY;
         shapeArray[shapeArrayPointer] = lineShape;
     } else if (selectionToolValue === 'Rectangle') {
-        const rectShape = new Shape('Rectangle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false);
+        const rectShape = new Shape('Rectangle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false, false);
         rectShape.width = mouseX - mouseXClick;
         rectShape.height = mouseY - mouseYClick;
         shapeArray[shapeArrayPointer] = rectShape;
     } else if (selectionToolValue === 'Circle') {
-        const arcShape = new Shape('Circle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false);
+        const arcShape = new Shape('Circle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false, false);
         var xDist = mouseX - mouseXClick;
         var yDist = mouseY - mouseYClick;
         var hyp2 = (Math.pow(xDist, 2)) + (Math.pow(yDist, 2));
@@ -258,101 +286,117 @@ function updateMouseClickPosition(event) {
         // LOOP TO FIND LAST SHAPE THAT CONTAINS POINTS
         while (!selectedShapeFound && selectedShapeIndex >= 0 && shapeArray.length != 0) {
             var currentValue = shapeArray[selectedShapeIndex];
-            if (currentValue.type === 'Line') {
-                var lineSlope = (currentValue.newY - currentValue.y) / (currentValue.newX - currentValue.x);
-                var pointSlope1 = (mouseYClick - currentValue.y) / (mouseXClick - currentValue.x);
-                var pointSlope2 = (mouseYClick - currentValue.newY) / (mouseXClick - currentValue.newX);
-                var difference1 = Math.abs(lineSlope - pointSlope1);
-                var difference2 = Math.abs(lineSlope - pointSlope2);
-                var nearVertical1 = !isFinite(pointSlope1) || Math.abs(pointSlope1) > 20;
-                var nearVertical2 = !isFinite(pointSlope2) || Math.abs(pointSlope2) > 20;
-                var nearHorizontal1 = Math.abs(pointSlope1) < 0.1;
-                var nearHorizontal2 = Math.abs(pointSlope2) < 0.1;
+            if (currentValue.draw) {
+                if (currentValue.type === 'Line') {
+                    var lineSlope = (currentValue.newY - currentValue.y) / (currentValue.newX - currentValue.x);
+                    var pointSlope1 = (mouseYClick - currentValue.y) / (mouseXClick - currentValue.x);
+                    var pointSlope2 = (mouseYClick - currentValue.newY) / (mouseXClick - currentValue.newX);
+                    var difference1 = Math.abs(lineSlope - pointSlope1);
+                    var difference2 = Math.abs(lineSlope - pointSlope2);
+                    var nearVertical1 = !isFinite(pointSlope1) || Math.abs(pointSlope1) > 20;
+                    var nearVertical2 = !isFinite(pointSlope2) || Math.abs(pointSlope2) > 20;
+                    var nearHorizontal1 = Math.abs(pointSlope1) < 0.1;
+                    var nearHorizontal2 = Math.abs(pointSlope2) < 0.1;
 
-                // NOW TO FIND THE CURRENT CASE
-                if (difference1 <= 0.1 || difference2 <= 0.1 || nearVertical1 || nearVertical2) {
-                    if  (nearVertical1 || nearVertical2) {
-                        if (difference1 > 20 || difference2 > 20) {
-                            selectedShapeFound = true;
-                            currentValue.selected = true;
-                            selectedShape = currentValue;
+                    // NOW TO FIND THE CURRENT CASE
+                    if (difference1 <= 0.1 || difference2 <= 0.1 || nearVertical1 || nearVertical2) {
+                        if  (nearVertical1 || nearVertical2) {
+                            if (difference1 > 20 || difference2 > 20) {
+                                selectedShapeFound = true;
+                                currentValue.selected = true;
+                                selectedShape = currentValue;
+                            }
+                        } else if (nearHorizontal1 || nearHorizontal2) {
+                            if (difference1 < 0.1 || difference2 < 0.1) {
+                                selectedShapeFound = true;
+                                currentValue.selected = true;
+                                selectedShape = currentValue;
+                            }
+                        } else if (currentValue.newX >= currentValue.x && currentValue.newY >= currentValue.y) {
+                            if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.newX &&
+                                currentValue.y <= mouseYClick && mouseYClick <= currentValue.newY) {
+                                    selectedShapeFound = true;
+                                    currentValue.selected = true;
+                                    selectedShape = currentValue;
+                            }
+                        } else if (currentValue.newX < currentValue.x && currentValue.newY >= currentValue.y) {
+                            if (currentValue.x >= mouseXClick && mouseXClick >= currentValue.newX &&
+                                currentValue.y <= mouseYClick && mouseYClick <= currentValue.newY) {
+                                    selectedShapeFound = true;
+                                    currentValue.selected = true;
+                                    selectedShape = currentValue;
+                            }
+                        } else if (currentValue.newX < currentValue.x && currentValue.newY < currentValue.y) {
+                            if (currentValue.x >= mouseXClick && mouseXClick >= currentValue.newX &&
+                                currentValue.y >= mouseYClick && mouseYClick >= currentValue.newY) {
+                                    selectedShapeFound = true;
+                                    currentValue.selected = true;
+                                    selectedShape = currentValue;
+                            }
+                        } else {
+                            if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.newX &&
+                                currentValue.y >= mouseYClick && mouseYClick >= currentValue.newY) {
+                                    selectedShapeFound = true;
+                                    currentValue.selected = true;
+                                    selectedShape = currentValue;
+                            }
                         }
-                    } else if (nearHorizontal1 || nearHorizontal2) {
-                        if (difference1 < 0.1 || difference2 < 0.1) {
-                            selectedShapeFound = true;
-                            currentValue.selected = true;
-                            selectedShape = currentValue;
-                        }
-                    } else if (currentValue.newX >= currentValue.x && currentValue.newY >= currentValue.y) {
-                        if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.newX &&
-                            currentValue.y <= mouseYClick && mouseYClick <= currentValue.newY) {
+                    }
+                } else if (currentValue.type === 'Rectangle') {
+                    if (currentValue.width >= 0 && currentValue.height >= 0) {
+                        if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.x + currentValue.width &&
+                            currentValue.y <= mouseYClick && mouseYClick <= currentValue.y + currentValue.height) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
                                 selectedShape = currentValue;
                         }
-                    } else if (currentValue.newX < currentValue.x && currentValue.newY >= currentValue.y) {
-                        if (currentValue.x >= mouseXClick && mouseXClick >= currentValue.newX &&
-                            currentValue.y <= mouseYClick && mouseYClick <= currentValue.newY) {
+                    } else if (currentValue.width >= 0 && currentValue.height < 0) {
+                        if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.x + currentValue.width &&
+                            currentValue.y  + currentValue.height <= mouseYClick && mouseYClick <= currentValue.y) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
                                 selectedShape = currentValue;
                         }
-                    } else if (currentValue.newX < currentValue.x && currentValue.newY < currentValue.y) {
-                        if (currentValue.x >= mouseXClick && mouseXClick >= currentValue.newX &&
-                            currentValue.y >= mouseYClick && mouseYClick >= currentValue.newY) {
+                    } else if (currentValue.width < 0 && currentValue.height >= 0) {
+                        if (currentValue.x + currentValue.width <= mouseXClick && mouseXClick <= currentValue.x &&
+                            currentValue.y <= mouseYClick && mouseYClick <= currentValue.y + currentValue.height) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
                                 selectedShape = currentValue;
                         }
                     } else {
-                        if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.newX &&
-                            currentValue.y >= mouseYClick && mouseYClick >= currentValue.newY) {
+                        if (currentValue.x + currentValue.width <= mouseXClick && mouseXClick <= currentValue.x &&
+                            currentValue.y + currentValue.height <= mouseYClick && mouseYClick <= currentValue.y) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
                                 selectedShape = currentValue;
                         }
                     }
-                }
-            } else if (currentValue.type === 'Rectangle') {
-                if (currentValue.width >= 0 && currentValue.height >= 0) {
-                    if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.x + currentValue.width &&
-                        currentValue.y <= mouseYClick && mouseYClick <= currentValue.y + currentValue.height) {
-                            selectedShapeFound = true;
-                            currentValue.selected = true;
-                            selectedShape = currentValue;
+                } else if (currentValue.type === 'Circle') {
+                    var dist = Math.sqrt(Math.pow(mouseXClick - currentValue.x, 2) + Math.pow(mouseYClick - currentValue.y, 2))
+                    if (dist <= currentValue.radius) {
+                        selectedShapeFound = true;
+                        currentValue.selected = true;
+                        selectedShape = currentValue;
                     }
-                } else if (currentValue.width >= 0 && currentValue.height < 0) {
-                    if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.x + currentValue.width &&
-                        currentValue.y  + currentValue.height <= mouseYClick && mouseYClick <= currentValue.y) {
-                            selectedShapeFound = true;
-                            currentValue.selected = true;
-                            selectedShape = currentValue;
-                    }
-                } else if (currentValue.width < 0 && currentValue.height >= 0) {
-                    if (currentValue.x + currentValue.width <= mouseXClick && mouseXClick <= currentValue.x &&
-                        currentValue.y <= mouseYClick && mouseYClick <= currentValue.y + currentValue.height) {
-                            selectedShapeFound = true;
-                            currentValue.selected = true;
-                            selectedShape = currentValue;
-                    }
-                } else {
-                    if (currentValue.x + currentValue.width <= mouseXClick && mouseXClick <= currentValue.x &&
-                        currentValue.y + currentValue.height <= mouseYClick && mouseYClick <= currentValue.y) {
-                            selectedShapeFound = true;
-                            currentValue.selected = true;
-                            selectedShape = currentValue;
-                    }
-                }
-            } else if (currentValue.type === 'Circle') {
-                var dist = Math.sqrt(Math.pow(mouseXClick - currentValue.x, 2) + Math.pow(mouseYClick - currentValue.y, 2))
-                if (dist <= currentValue.radius) {
-                    selectedShapeFound = true;
-                    currentValue.selected = true;
-                    selectedShape = currentValue;
                 }
             }
+            if (!selectedShapeFound) {
+                selectedShape = new Shape(null, null, null, null, null, null, false, null, null, null);
+            } else {
+                // UPDATE TOP BAR VALUES
+                var fillColor = selectedShape.fillColor;
+                var fillColorElement = document.getElementById('fillColorChoice');
+                fillColorElement.value = fillColor;
+                var lineColor = selectedShape.lineColor;
+                var lineColorElement = document.getElementById('lineColorChoice');
+                lineColorElement.value = lineColor;
+                var lineWidth = selectedShape.lineWidth;
+                var lineWidthElement = document.getElementById('lineWidthChoice');
+                lineWidthElement.value = lineWidth;
+            }
             selectedShapeIndex--;
-            render(); //need to remove
+            render();
         }
     }
 }
@@ -363,9 +407,7 @@ function render() {
     for (var i = 0; i < shapeArray.length; i++) {
         var currentValue = shapeArray[i];
         if (currentValue.draw) {
-            if (currentValue.type === 'Selection') {
-
-            } else if (currentValue.type === 'Line') {
+            if (currentValue.type === 'Line') {
                 if (currentValue.selected) {
                     gc.strokeStyle = '#0dd5fc';
                     gc.setLineDash([5, 4]);
@@ -450,8 +492,8 @@ function clearAll() {
 // FOR DELETING SELECTED SHAPES
 function deleteShape() {
     undoRedoArray = [];
-    if (selectedShapeIndex != -1) {
-        var currentValue = shapeArray[selectedShapeIndex];
+    if (selectedShapeIndex != -1 || !(selectedShape === null)) {
+        var currentValue = shapeArray[++selectedShapeIndex];
         currentValue.indexofDeletion = ++shapeArrayPointer;
         currentValue.deletion = true;
         currentValue.draw = false;
@@ -467,8 +509,21 @@ function deleteShape() {
 function undoAction() {
     var currentValue = shapeArray.pop();
     undoRedoArray.push(currentValue);
+    var wasADeletion = false;
     if (currentValue.deletion) {
-        currentValue.draw = true;
+        if (shapeArrayPointer == currentValue.indexofDeletion) {
+            currentValue.draw = true;
+            wasADeletion = true;
+        }
+    }
+    if (currentValue.moved && !wasADeletion) {
+        shapeArray[currentValue.originalShapeIndex].draw = true;
+        currentValue.x -= currentValue.moveXDifference;
+        currentValue.y -= currentValue.moveYDifference;
+        if (currentValue.type === 'Line') {
+            currentValue.newX -= currentValue.moveXDifference;
+            currentValue.newY -= currentValue.moveYDifference;
+        }
     }
     selectedShape.selected = false;
     shapeArrayPointer--;
@@ -482,9 +537,20 @@ function redoAction() {
     var currentValue = undoRedoArray.pop();
     shapeArray.push(currentValue);
     shapeArrayPointer++;
+    var wasADeletion = false;
     if (currentValue.deletion) {
         if (shapeArrayPointer == currentValue.indexofDeletion) {
             currentValue.draw = false;
+            wasADeletion = true;
+        }
+    } 
+    if (currentValue.moved && !wasADeletion) {
+        shapeArray[currentValue.originalShapeIndex].draw = false;
+        currentValue.x += currentValue.moveXDifference;
+        currentValue.y += currentValue.moveYDifference;
+        if (currentValue.type === 'Line') {
+            currentValue.newX += currentValue.moveXDifference;
+            currentValue.newY += currentValue.moveYDifference;
         }
     }
     selectedShape.selected = false;
