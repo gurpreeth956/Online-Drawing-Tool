@@ -79,6 +79,12 @@ function init() {
     cleared = true;
     selectedShapeMoved = false;
     selectedShape = new Shape(null, null, null, null, null, null , null, null, null, null);
+    
+    // DRAW WHITE BACKGROUND
+    gc.beginPath();
+    gc.fillStyle = '#ffffff';
+    gc.fillRect(0, 0, canvas.width, canvas.height);
+    gc.stroke();
 
     // NECESSARY METHODS
     updateAll();
@@ -120,6 +126,15 @@ function updateAll() {
     if (!(selectionToolValue === 'Selection')) {
         selectedShape.selected = false;
     }
+}
+
+// FOR PRINT FUNCTION
+function print() {
+    var imgData = canvas.toDataURL("image/jpeg", 1.0);
+    var pdf = new jsPDF();
+  
+    pdf.addImage(imgData, 'JPEG', 0, 0);
+    pdf.save("download.pdf");
 }
 
 // FOR UPDATING AFTER TOOL CHANGE
@@ -404,6 +419,14 @@ function updateMouseClickPosition(event) {
 // FOR RENDERING THE CANVAS
 function render() {
     clearCanvas(); // remove this for matrix functions
+
+    // DRAW WHITE BACKGROUND
+    gc.beginPath();
+    gc.fillStyle = '#ffffff';
+    gc.fillRect(0, 0, canvas.width, canvas.height);
+    gc.stroke();
+
+    // DRAW ALL SHAPES IN ARRAY
     for (var i = 0; i < shapeArray.length; i++) {
         var currentValue = shapeArray[i];
         if (currentValue.draw) {
@@ -479,7 +502,7 @@ function clearCanvas() {
 // FOR CLEARING BY CLEAR BUTTON
 function clearAll() {
     undoRedoArray = [];
-    const rectShape = new Shape('Rectangle', 0, 0, '#ffffff', '#ffffff', 1, false, true, false);
+    const rectShape = new Shape('Rectangle', 0, 0, '#ffffff', '#ffffff', 1, false, true, false, false, false);
     rectShape.width = canvas.width;
     rectShape.height = canvas.height;;
     shapeArray[shapeArrayPointer] = rectShape;
