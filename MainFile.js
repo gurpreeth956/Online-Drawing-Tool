@@ -36,7 +36,7 @@ function Location(initX, initY) {
 
 // SHAPE CLASS
 function Shape(initType, initX, initY, initFillColor, initLineColor, initLineWidth, initSelect, initDraw, 
-        initDeletion, initMoved) {
+        initDeletion, initMoved, initChanged) {
     this.type = initType; // SHAPE TYPE
     this.x = initX; // STARTING X
     this.y = initY; // STARTING Y
@@ -47,6 +47,7 @@ function Shape(initType, initX, initY, initFillColor, initLineColor, initLineWid
     this.draw = initDraw; // HELPER FOR DELETION
     this.deletion = initDeletion; // IF DELETION
     this.moved = initMoved; // IF MOVED
+    this.changed = initChanged; // IF CHANGED
 }
 
 // FOR INITIATING THE PROGRAM
@@ -78,7 +79,7 @@ function init() {
     clickOnCanvas = false;
     cleared = true;
     selectedShapeMoved = false;
-    selectedShape = new Shape(null, null, null, null, null, null , null, null, null, null);
+    selectedShape = new Shape(null, null, null, null, null, null , null, null, null, null, null);
     
     // DRAW WHITE BACKGROUND
     gc.beginPath();
@@ -150,13 +151,26 @@ function updateSelection() {
 
 // FOR UPDATING SELECTED SHAPE STUFF
 function updateShape() {
+    selectedShape.changed = true;
+    selectedShape.indexOfChange = shapeArrayPointer;
     var fillColor = $('#fillColorChoice');
     selectedShape.fillColor = fillColor.val();
+    selectedShape.newFillColor = fillColor.val();
     var lineColor = $('#lineColorChoice');
     selectedShape.lineColor = lineColor.val();
+    selectedShape.newLineColor = lineColor.val();
     var widthLine = $('#lineWidthChoice');
     selectedShape.lineWidth = widthLine.val();
+    selectedShape.newLineWidth = widthLine.val();
     render();
+}
+
+// FOR UPDATING SHAPE POINTER AFTER COLOR CHANGE
+function updateShapePointer() {
+    selectedShape.oldFillColor = selectedShape.fillColor;
+    selectedShape.oldLineColor = selectedShape.lineColor;
+    selectedShape.oldLineWidth = selectedShape.lineWidth;
+    shapeArray[shapeArrayPointer++] = selectedShape;
 }
 
 // FOR UPDATING MOUSE CLICKS
@@ -173,7 +187,6 @@ function processMouseClick(event) {
     }
 
     // NOW ADD TO ARRAY 
-    // need to remove selection once it is added as an undoable event !!!!!
     if ((!wasAClick && !(selectionToolValue === 'Selection')) || selectedShapeMoved) {
         shapeArrayPointer++;
         wasAClick = true;
@@ -210,7 +223,8 @@ function processMouseDrag(event) {
                 var currentValue = shapeArray[selectedShapeIndex];
                 currentValue.draw = false;
                 const moveShape = new Shape(currentValue.type, currentValue.x + (mouseX - mouseXClick), currentValue.y + (mouseY - mouseYClick), 
-                        currentValue.fillColor, currentValue.lineColor, currentValue.lineWidth, currentValue.selected, true, currentValue.deletion, true);
+                        currentValue.fillColor, currentValue.lineColor, currentValue.lineWidth, currentValue.selected, true, currentValue.deletion, 
+                        true, currentValue.changed);
                 moveShape.moveXDifference = mouseX - mouseXClick;
                 moveShape.moveYDifference = mouseY - mouseYClick;
                 moveShape.originalShapeIndex = selectedShapeIndex;
@@ -228,23 +242,27 @@ function processMouseDrag(event) {
                 selectedShape.selected = false;
                 selectedShape = moveShape;
                 selectedShape.selected = true;
+                selectedShape.indexOfMoved = shapeArrayPointer + 1;
                 shapeArray[shapeArrayPointer] = moveShape;
                 selectedShapeMoved = true;
             }
             selectedShapeIndex--;
         }
     } else if (selectionToolValue === 'Line') {
-        const lineShape = new Shape('Line', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false, false);
+        const lineShape = new Shape('Line', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue,
+                false, true, false, false, false);
         lineShape.newX = mouseX;
         lineShape.newY = mouseY;
         shapeArray[shapeArrayPointer] = lineShape;
     } else if (selectionToolValue === 'Rectangle') {
-        const rectShape = new Shape('Rectangle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false, false);
+        const rectShape = new Shape('Rectangle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue,
+                false, true, false, false, false);
         rectShape.width = mouseX - mouseXClick;
         rectShape.height = mouseY - mouseYClick;
         shapeArray[shapeArrayPointer] = rectShape;
     } else if (selectionToolValue === 'Circle') {
-        const arcShape = new Shape('Circle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue, false, true, false, false);
+        const arcShape = new Shape('Circle', mouseXClick, mouseYClick, fillColorValue, lineColorValue, widthLineValue,
+                false, true, false, false, false);
         var xDist = mouseX - mouseXClick;
         var yDist = mouseY - mouseYClick;
         var hyp2 = (Math.pow(xDist, 2)) + (Math.pow(yDist, 2));
@@ -397,7 +415,7 @@ function updateMouseClickPosition(event) {
                 }
             }
             if (!selectedShapeFound) {
-                selectedShape = new Shape(null, null, null, null, null, null, false, null, null, null);
+                selectedShape = new Shape(null, null, null, null, null, null, false, null, null, null, null);
             } else {
                 // UPDATE TOP BAR VALUES
                 var fillColor = selectedShape.fillColor;
@@ -502,7 +520,7 @@ function clearCanvas() {
 // FOR CLEARING BY CLEAR BUTTON
 function clearAll() {
     undoRedoArray = [];
-    const rectShape = new Shape('Rectangle', 0, 0, '#ffffff', '#ffffff', 1, false, true, false, false, false);
+    const rectShape = new Shape('Rectangle', 0, 0, '#ffffff', '#ffffff', 1, false, true, false, false, false, false);
     rectShape.width = canvas.width;
     rectShape.height = canvas.height;;
     shapeArray[shapeArrayPointer] = rectShape;
@@ -530,9 +548,11 @@ function deleteShape() {
 
 // FOR UNDOING AN ACTION
 function undoAction() {
+    debugger;
     var currentValue = shapeArray.pop();
     undoRedoArray.push(currentValue);
     var wasADeletion = false;
+    var wasAMoved = false;
     if (currentValue.deletion) {
         if (shapeArrayPointer == currentValue.indexofDeletion) {
             currentValue.draw = true;
@@ -540,13 +560,21 @@ function undoAction() {
         }
     }
     if (currentValue.moved && !wasADeletion) {
-        shapeArray[currentValue.originalShapeIndex].draw = true;
-        currentValue.x -= currentValue.moveXDifference;
-        currentValue.y -= currentValue.moveYDifference;
-        if (currentValue.type === 'Line') {
-            currentValue.newX -= currentValue.moveXDifference;
-            currentValue.newY -= currentValue.moveYDifference;
+        if (shapeArrayPointer == currentValue.indexOfMoved) {
+            shapeArray[currentValue.originalShapeIndex].draw = true;
+            currentValue.x -= currentValue.moveXDifference;
+            currentValue.y -= currentValue.moveYDifference;
+            if (currentValue.type === 'Line') {
+                currentValue.newX -= currentValue.moveXDifference;
+                currentValue.newY -= currentValue.moveYDifference;
+            }
+            wasAMoved = true;
         }
+    }
+    if (currentValue.changed && !wasADeletion && !wasAMoved) {
+        currentValue.fillColor = currentValue.oldFillColor;
+        currentValue.lineColor = currentValue.oldLineColor;
+        currentValue.lineWidth = currentValue.oldLineWidth;
     }
     selectedShape.selected = false;
     shapeArrayPointer--;
@@ -561,6 +589,7 @@ function redoAction() {
     shapeArray.push(currentValue);
     shapeArrayPointer++;
     var wasADeletion = false;
+    var wasAMoved = false;
     if (currentValue.deletion) {
         if (shapeArrayPointer == currentValue.indexofDeletion) {
             currentValue.draw = false;
@@ -568,13 +597,21 @@ function redoAction() {
         }
     } 
     if (currentValue.moved && !wasADeletion) {
-        shapeArray[currentValue.originalShapeIndex].draw = false;
-        currentValue.x += currentValue.moveXDifference;
-        currentValue.y += currentValue.moveYDifference;
-        if (currentValue.type === 'Line') {
-            currentValue.newX += currentValue.moveXDifference;
-            currentValue.newY += currentValue.moveYDifference;
+        if (shapeArrayPointer == currentValue.indexOfMoved) {
+            shapeArray[currentValue.originalShapeIndex].draw = false;
+            currentValue.x += currentValue.moveXDifference;
+            currentValue.y += currentValue.moveYDifference;
+            if (currentValue.type === 'Line') {
+                currentValue.newX += currentValue.moveXDifference;
+                currentValue.newY += currentValue.moveYDifference;
+            }
+            wasAMoved = true;
         }
+    }
+    if (currentValue.changed && !wasADeletion && !wasAMoved) {
+        currentValue.fillColor = currentValue.newFillColor;
+        currentValue.lineColor = currentValue.newLineColor;
+        currentValue.lineWidth = currentValue.newLineWidth;
     }
     selectedShape.selected = false;
     cleared = false;

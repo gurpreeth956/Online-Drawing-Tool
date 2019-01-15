@@ -33,12 +33,16 @@
             </select></span>
 
             <span class="toolbar_control"><strong>Fill Color: </strong><span id="fill_color"></span></span>
-            <span class="toolbar_control"><input type="color" id="fillColorChoice" name="fillColor" value="#ffffff" onchange="updateShape()"/></span></span>
+            <span class="toolbar_control"><input type="color" id="fillColorChoice" name="fillColor" value="#ffffff" 
+                                            onchange="updateShape()" onclick="updateShapePointer()"/></span></span>
             <span class="toolbar_control"><strong>Line Color: </strong><span id="line_color"></span></span>
-            <span class="toolbar_control"><input type="color" id="lineColorChoice" name="lineColor" onchange="updateShape()"/></span></span>
+            <span class="toolbar_control"><input type="color" id="lineColorChoice" name="lineColor"
+                                            onchange="updateShape()" onclick="updateShapePointer()"/></span></span>
             <span class="toolbar_control"><strong>Line Width: </strong><span id="line_width"></span></span>
-            <span class="toolbar_control"><input type="text" id="lineWidthChoice" name="lineWidth" value="1" onkeypress="return isNumber(event)" onchange="updateShape()"/></span>
-
+            <span class="toolbar_control"><input type="text" id="lineWidthChoice" name="lineWidth" value="1"
+                                            onkeypress="return isNumber(event)" onchange="updateShape()" 
+                                            onclick="updateShapePointer()"/></span>
+                                            
             <span class="toolbar_control"><input type="button" id="clear" value="Clear" onclick="clearAll()"/></span>
             <span class="toolbar_control"><input type="button" id="delete" value="Delete" onclick="deleteShape()"/></span>
             <span class="toolbar_control"><input type="button" id="undo" value="Undo" onclick="undoAction()"/></span>
