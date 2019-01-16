@@ -129,11 +129,55 @@ function updateAll() {
     }
 }
 
+// FOR SAVE FUNCTION
+function save(filename, type) {
+    var data = getData();
+    var file = new Blob([data], {type : type});
+    var a = document.createElement("a");
+    var url = URL.createObjectURL(file);
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);  
+    }, 0); 
+}
+
+// FOR PUTTING DATA IN SAVABLE FORMAT
+function getData() {
+    var data = '[\n';
+    for (var i = 0; i < shapeArray.length; i++) {
+        var currentValue = shapeArray[i];
+        data += '\t{\n';
+        data += '\t\t\"type\": \"' + currentValue.type + '\",\n';
+        data += '\t\t\"x\": \"' + currentValue.x + '\",\n';
+        data += '\t\t\"y\": \"' + currentValue.y + '\",\n';
+        data += '\t\t\"fillcolor\": \"' + currentValue.fillColor + '\",\n';
+        data += '\t\t\"linecolor\": \"' + currentValue.lineColor + '\",\n';
+        data += '\t\t\"linewidth\": \"' + currentValue.lineWidth + '\",\n';
+        if (currentValue.type === 'Line') {
+            data += '\t\t\"newX\": \"' + currentValue.newX + '\",\n';
+            data += '\t\t\"newY\": \"' + currentValue.newY + '\"\n';
+        } else if (currentValue.type === 'Rectangle') {
+            data += '\t\t\"width\": \"' + currentValue.width + '\",\n';
+            data += '\t\t\"height\": \"' + currentValue.height + '\"\n';
+        } else if (currentValue.type === 'Circle') {
+            data += '\t\t\"radius\": \"' + currentValue.radius + '\",\n';
+            data += '\t\t\"startangle\": \"' + currentValue.startAngle + '\",\n';
+            data += '\t\t\"endangle\": \"' + currentValue.endAngle + '\"\n';
+        }
+        data += '\t},\n';
+    }
+    data = data.substring(0, data.lastIndexOf(',')) + '\n]';
+    return data;
+}
+
 // FOR PRINT FUNCTION
 function print() {
     var imgData = canvas.toDataURL("image/jpeg", 1.0);
     var pdf = new jsPDF();
-  
     pdf.addImage(imgData, 'JPEG', 0, 0);
     pdf.save("download.pdf");
 }
@@ -186,7 +230,7 @@ function processMouseClick(event) {
         var currentValue = shapeArray[selectedShapeIndex];
     }
 
-    // NOW ADD TO ARRAY 
+    // NOW ADD TO ARRAY
     if ((!wasAClick && !(selectionToolValue === 'Selection')) || selectedShapeMoved) {
         shapeArrayPointer++;
         wasAClick = true;
@@ -520,7 +564,7 @@ function clearCanvas() {
 // FOR CLEARING BY CLEAR BUTTON
 function clearAll() {
     undoRedoArray = [];
-    const rectShape = new Shape('Rectangle', 0, 0, '#ffffff', '#ffffff', 1, false, true, false, false, false, false);
+    const rectShape = new Shape('Rectangle', 0, 0, '#ffffff', '#ffffff', 1, false, true, false, false, false);
     rectShape.width = canvas.width;
     rectShape.height = canvas.height;;
     shapeArray[shapeArrayPointer] = rectShape;
@@ -548,7 +592,6 @@ function deleteShape() {
 
 // FOR UNDOING AN ACTION
 function undoAction() {
-    debugger;
     var currentValue = shapeArray.pop();
     undoRedoArray.push(currentValue);
     var wasADeletion = false;
@@ -572,9 +615,11 @@ function undoAction() {
         }
     }
     if (currentValue.changed && !wasADeletion && !wasAMoved) {
-        currentValue.fillColor = currentValue.oldFillColor;
-        currentValue.lineColor = currentValue.oldLineColor;
-        currentValue.lineWidth = currentValue.oldLineWidth;
+        if (shapeArrayPointer == currentValue.indexOfChange) {
+            currentValue.fillColor = currentValue.oldFillColor;
+            currentValue.lineColor = currentValue.oldLineColor;
+            currentValue.lineWidth = currentValue.oldLineWidth;
+        }
     }
     selectedShape.selected = false;
     shapeArrayPointer--;
@@ -609,9 +654,11 @@ function redoAction() {
         }
     }
     if (currentValue.changed && !wasADeletion && !wasAMoved) {
-        currentValue.fillColor = currentValue.newFillColor;
-        currentValue.lineColor = currentValue.newLineColor;
-        currentValue.lineWidth = currentValue.newLineWidth;
+        if (shapeArrayPointer == currentValue.indexOfChange) {
+            currentValue.fillColor = currentValue.newFillColor;
+            currentValue.lineColor = currentValue.newLineColor;
+            currentValue.lineWidth = currentValue.newLineWidth;
+        }
     }
     selectedShape.selected = false;
     cleared = false;
