@@ -14,13 +14,13 @@
     <body>
         <h2>ONLINE DRAWING TOOL</h2>
         <div id="menu_toolbar">
-            <span class="menubar_control"><input type="button" id="save" value="Save" onclick="save('onlinetoolsave.json', 'application/json')"/></span>
-            <span class="menubar_control"><input type="button" id="load" value="Load" onclick="load()"/></span>
             <span class="menubar_control"><input type="button" id="print" value="Print" onclick="print()"/></span>
+            <span class="menubar_control"><input type="button" id="save" value="Save" onclick="save('onlinetoolsave.json', 'application/json')"/></span>
+            <span class="menubar_control"><strong>Load: </strong><span id="load_text"></span></span>
+            <span class="menubar_control"><input type="file" id="load" single onchange="load(event)"/></span>
             <span class="menubar_control"><input type="button" id="copy" value="Copy" onclick="copy()"/></span>
             <span class="menubar_control"><input type="button" id="cut" value="Cut" onclick="cut()"/></span>
             <span class="menubar_control"><input type="button" id="paste" value="Paste" onclick="paste()"/></span>
-            <span class="menubar_control"><input type="button" id="images" value="Images" onclick="images()"/></span>
         </div>
 
 		<div id="controls_toolbar">

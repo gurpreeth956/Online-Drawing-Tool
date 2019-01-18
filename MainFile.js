@@ -48,6 +48,7 @@ function Shape(initType, initX, initY, initFillColor, initLineColor, initLineWid
     this.deletion = initDeletion; // IF DELETION
     this.moved = initMoved; // IF MOVED
     this.changed = initChanged; // IF CHANGED
+    this.recent = true; // MOST RECENT SHAPE
 }
 
 // FOR INITIATING THE PROGRAM
@@ -147,31 +148,97 @@ function save(filename, type) {
 
 // FOR PUTTING DATA IN SAVABLE FORMAT
 function getData() {
-    var data = '[\n';
+    var stuffAdded = false;
+    debugger;
+    var data = '{\"shapes\": [\n';
     for (var i = 0; i < shapeArray.length; i++) {
+        var skipAdd = false;
+        stuffAdded = true;
         var currentValue = shapeArray[i];
-        data += '\t{\n';
-        data += '\t\t\"type\": \"' + currentValue.type + '\",\n';
-        data += '\t\t\"x\": \"' + currentValue.x + '\",\n';
-        data += '\t\t\"y\": \"' + currentValue.y + '\",\n';
-        data += '\t\t\"fillcolor\": \"' + currentValue.fillColor + '\",\n';
-        data += '\t\t\"linecolor\": \"' + currentValue.lineColor + '\",\n';
-        data += '\t\t\"linewidth\": \"' + currentValue.lineWidth + '\",\n';
-        if (currentValue.type === 'Line') {
-            data += '\t\t\"newX\": \"' + currentValue.newX + '\",\n';
-            data += '\t\t\"newY\": \"' + currentValue.newY + '\"\n';
-        } else if (currentValue.type === 'Rectangle') {
-            data += '\t\t\"width\": \"' + currentValue.width + '\",\n';
-            data += '\t\t\"height\": \"' + currentValue.height + '\"\n';
-        } else if (currentValue.type === 'Circle') {
-            data += '\t\t\"radius\": \"' + currentValue.radius + '\",\n';
-            data += '\t\t\"startangle\": \"' + currentValue.startAngle + '\",\n';
-            data += '\t\t\"endangle\": \"' + currentValue.endAngle + '\"\n';
+
+        // SHAPES NOT TO ADD
+        if (currentValue.deletion) {
+            if (currentValue.indexofDeletion <= shapeArray.length) {
+                skipAdd = true;
+            }
         }
-        data += '\t},\n';
+        
+        if (!skipAdd && currentValue.recent) {
+            data += '\t{\n';
+            data += '\t\t\"type\": \"' + currentValue.type + '\",\n';
+            data += '\t\t\"x\": \"' + currentValue.x + '\",\n';
+            data += '\t\t\"y\": \"' + currentValue.y + '\",\n';
+            data += '\t\t\"fillcolor\": \"' + currentValue.fillColor + '\",\n';
+            data += '\t\t\"linecolor\": \"' + currentValue.lineColor + '\",\n';
+            data += '\t\t\"linewidth\": \"' + currentValue.lineWidth + '\",\n';
+            if (currentValue.type === 'Line') {
+                data += '\t\t\"newX\": \"' + currentValue.newX + '\",\n';
+                data += '\t\t\"newY\": \"' + currentValue.newY + '\"\n';
+            } else if (currentValue.type === 'Rectangle') {
+                data += '\t\t\"width\": \"' + currentValue.width + '\",\n';
+                data += '\t\t\"height\": \"' + currentValue.height + '\"\n';
+            } else if (currentValue.type === 'Circle') {
+                data += '\t\t\"radius\": \"' + currentValue.radius + '\",\n';
+                data += '\t\t\"startangle\": \"' + currentValue.startAngle + '\",\n';
+                data += '\t\t\"endangle\": \"' + currentValue.endAngle + '\"\n';
+            }
+            data += '\t},\n';
+        }
     }
-    data = data.substring(0, data.lastIndexOf(',')) + '\n]';
+    if (stuffAdded) {
+        data = data.substring(0, data.lastIndexOf(','));
+    }
+    data += '\n]}';
     return data;
+}
+
+// FOR LOAD FUNCTION
+function load(event) {
+    var reader = new FileReader();
+    reader.onload = onReaderLoad;
+    reader.readAsText(event.target.files[0]);
+}
+
+// TO GET DATA FROM LOADED FILE
+function onReaderLoad(event){
+    //console.log(event.target.result);
+    var data = JSON.parse(event.target.result);
+    var count = Object.keys(data).length;
+
+    // CLEAR OUT PREVIOUS DATA
+    shapeArray = [];
+    undoRedoArray = [];
+    shapeArrayPointer = 0;
+    selectedShapeIndex = -1;
+    isMouseDown = false;
+    wasAClick = true;
+    clickOnCanvas = false;
+    cleared = true;
+    selectedShapeMoved = false;
+    selectedShape = new Shape(null, null, null, null, null, null , null, null, null, null, null);
+
+    // NOW UPDATE DATA FROM FILE
+    for (var i = 0; i < data.shapes.length; i++) {
+        var currentShape = data.shapes[i];
+        var addShape = new Shape(currentShape.type, parseFloat(currentShape.x), parseFloat(currentShape.y), 
+                currentShape.fillcolor, currentShape.linecolor, parseFloat(currentShape.linewidth),
+                false, true, false, false, false);
+        if (addShape.type === 'Line') {
+            addShape.newX = parseFloat(currentShape.newX);
+            addShape.newY = parseFloat(currentShape.newY);
+        } else if (addShape.type === 'Rectangle') {
+            addShape.width = parseFloat(currentShape.width);
+            addShape.height = parseFloat(currentShape.height);
+        } else if (addShape.type === 'Circle') {
+            addShape.radius = parseFloat(currentShape.radius);
+            addShape.startAngle = parseFloat(currentShape.startangle);
+            addShape.endAngle = parseFloat(currentShape.endangle);
+        }
+        shapeArray[shapeArrayPointer] = addShape;
+        shapeArrayPointer++;
+    }
+    render();
+    updateAll();
 }
 
 // FOR PRINT FUNCTION
@@ -264,6 +331,7 @@ function processMouseDrag(event) {
         if (selectedShape != null) {
             selectedShapeIndex++;
             if (selectedShapeIndex >= 0 && selectedShapeIndex < shapeArray.length) {
+                selectedShape.recent = false;
                 var currentValue = shapeArray[selectedShapeIndex];
                 currentValue.draw = false;
                 const moveShape = new Shape(currentValue.type, currentValue.x + (mouseX - mouseXClick), currentValue.y + (mouseY - mouseYClick), 
@@ -379,15 +447,35 @@ function updateMouseClickPosition(event) {
                     if (difference1 <= 0.1 || difference2 <= 0.1 || nearVertical1 || nearVertical2) {
                         if  (nearVertical1 || nearVertical2) {
                             if (difference1 > 20 || difference2 > 20) {
-                                selectedShapeFound = true;
-                                currentValue.selected = true;
-                                selectedShape = currentValue;
+                                if (currentValue.y < currentValue.newY) {
+                                    if (currentValue.y <= mouseYClick && mouseYClick <= currentValue.newY) {
+                                        selectedShapeFound = true;
+                                        currentValue.selected = true;
+                                        selectedShape = currentValue;
+                                    }
+                                } else {
+                                    if (currentValue.y >= mouseYClick && mouseYClick >= currentValue.newY) {
+                                        selectedShapeFound = true;
+                                        currentValue.selected = true;
+                                        selectedShape = currentValue;
+                                    }
+                                }
                             }
                         } else if (nearHorizontal1 || nearHorizontal2) {
                             if (difference1 < 0.1 || difference2 < 0.1) {
-                                selectedShapeFound = true;
-                                currentValue.selected = true;
-                                selectedShape = currentValue;
+                                if (currentValue.x < currentValue.newX) {
+                                    if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.newX) {
+                                        selectedShapeFound = true;
+                                        currentValue.selected = true;
+                                        selectedShape = currentValue;
+                                    }
+                                } else {
+                                    if (currentValue.x >= mouseXClick && mouseXClick >= currentValue.newX) {
+                                        selectedShapeFound = true;
+                                        currentValue.selected = true;
+                                        selectedShape = currentValue;
+                                    }
+                                }
                             }
                         } else if (currentValue.newX >= currentValue.x && currentValue.newY >= currentValue.y) {
                             if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.newX &&
@@ -421,29 +509,29 @@ function updateMouseClickPosition(event) {
                     }
                 } else if (currentValue.type === 'Rectangle') {
                     if (currentValue.width >= 0 && currentValue.height >= 0) {
-                        if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.x + currentValue.width &&
-                            currentValue.y <= mouseYClick && mouseYClick <= currentValue.y + currentValue.height) {
+                        if (currentValue.x <= mouseXClick && mouseXClick <= (currentValue.x + currentValue.width) &&
+                            currentValue.y <= mouseYClick && mouseYClick <= (currentValue.y + currentValue.height)) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
                                 selectedShape = currentValue;
                         }
                     } else if (currentValue.width >= 0 && currentValue.height < 0) {
-                        if (currentValue.x <= mouseXClick && mouseXClick <= currentValue.x + currentValue.width &&
+                        if (currentValue.x <= mouseXClick && mouseXClick <= (currentValue.x + currentValue.width) &&
                             currentValue.y  + currentValue.height <= mouseYClick && mouseYClick <= currentValue.y) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
                                 selectedShape = currentValue;
                         }
                     } else if (currentValue.width < 0 && currentValue.height >= 0) {
-                        if (currentValue.x + currentValue.width <= mouseXClick && mouseXClick <= currentValue.x &&
-                            currentValue.y <= mouseYClick && mouseYClick <= currentValue.y + currentValue.height) {
+                        if ((currentValue.x + currentValue.width) <= mouseXClick && mouseXClick <= currentValue.x &&
+                            currentValue.y <= mouseYClick && mouseYClick <= (currentValue.y + currentValue.height)) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
                                 selectedShape = currentValue;
                         }
                     } else {
-                        if (currentValue.x + currentValue.width <= mouseXClick && mouseXClick <= currentValue.x &&
-                            currentValue.y + currentValue.height <= mouseYClick && mouseYClick <= currentValue.y) {
+                        if ((currentValue.x + currentValue.width) <= mouseXClick && mouseXClick <= currentValue.x &&
+                            (currentValue.y + currentValue.height) <= mouseYClick && mouseYClick <= currentValue.y) {
                                 selectedShapeFound = true;
                                 currentValue.selected = true;
                                 selectedShape = currentValue;
