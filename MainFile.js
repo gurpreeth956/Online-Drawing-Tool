@@ -23,6 +23,7 @@ var cleared;
 var selectedShape;
 var selectedShapeIndex;
 var selectedShapeMoved;
+var copiedShape;
 var shapeArray;
 var shapeArrayPointer;
 var undoRedoArray;
@@ -81,6 +82,7 @@ function init() {
     cleared = true;
     selectedShapeMoved = false;
     selectedShape = new Shape(null, null, null, null, null, null , null, null, null, null, null);
+    copiedShape = new Shape(null, null, null, null, null, null, null, null, null, null, null);
     
     // DRAW WHITE BACKGROUND
     gc.beginPath();
@@ -115,13 +117,24 @@ function updateAll() {
         document.getElementById('clear').disabled = false;
     }
 
-    // FOOLPROOF DESIGN FOR DELETE BUTTON
+    // FOOLPROOF DESIGN FOR DELETE, COPY AND CUT BUTTONS
     var selectionTool = $('#shapeSelect');
     var selectionToolValue = selectionTool.val();
     if ((selectedShapeIndex >= 0 || !(selectedShape.type === null)) && selectionToolValue === 'Selection') {
         document.getElementById('delete').disabled = false;
+        document.getElementById('copy').disabled = false;
+        document.getElementById('cut').disabled = false;
     } else {
         document.getElementById('delete').disabled = true;
+        document.getElementById('copy').disabled = true;
+        document.getElementById('cut').disabled = true;
+    }
+
+    // FOOLPROOF DESIGN FOR PASTE BUTTON
+    if (!(copiedShape.type === null)) {
+        document.getElementById('paste').disabled = false;
+    } else {
+        document.getElementById('paste').disabled = true;
     }
 
     // FOOLPROOF DESIGN FOR SELECTION
@@ -238,7 +251,6 @@ function onReaderLoad(event){
         shapeArrayPointer++;
     }
     render();
-    updateAll();
 }
 
 // FOR PRINT FUNCTION
@@ -247,6 +259,59 @@ function print() {
     var pdf = new jsPDF();
     pdf.addImage(imgData, 'JPEG', 0, 0);
     pdf.save("download.pdf");
+}
+
+// FOR COPY FUNCTION
+function copy() {
+    copiedShape = selectedShape;
+    updateAll();
+}
+
+// FOR PASTE FUNCTION
+function paste() {
+    undoRedoArray = [];
+    var pastedShape = new Shape(copiedShape.type, copiedShape.x, copiedShape.y, copiedShape.fillColor,
+            copiedShape.lineColor, copiedShape.lineWidth, false, true, false, false, false);
+    if (copiedShape.type === 'Line') {
+        pastedShape.newX = copiedShape.newX;
+        pastedShape.newY = copiedShape.newY;
+    } else if (copiedShape.type === 'Rectangle') {
+        pastedShape.width = copiedShape.width;
+        pastedShape.height = copiedShape.height;
+    } else if (copiedShape.type === 'Circle') {
+        pastedShape.radius = copiedShape.radius;
+        pastedShape.startAngle = copiedShape.startAngle;
+        pastedShape.endAngle = copiedShape.endAngle;
+    }
+    shapeArray[shapeArrayPointer] = pastedShape;
+    shapeArrayPointer++;
+    render();
+
+    // UPDATE CERTAIN BUTTON DISABLES
+    document.getElementById('delete').disabled = true;
+    document.getElementById('copy').disabled = true;
+    document.getElementById('cut').disabled = true;
+}
+
+// FOR CUT FUNTION
+function cut() {
+    copiedShape = selectedShape;
+    undoRedoArray = [];
+    if (selectedShapeIndex != -1 || !(selectedShape === null)) {
+        var currentValue = shapeArray[++selectedShapeIndex];
+        currentValue.indexofDeletion = ++shapeArrayPointer;
+        currentValue.deletion = true;
+        currentValue.draw = false;
+        shapeArray.push(currentValue);
+        selectedShapeIndex = -1;
+        cleared = false;
+    }
+    render();
+    
+    // UPDATE CERTAIN BUTTON DISABLES
+    document.getElementById('delete').disabled = true;
+    document.getElementById('copy').disabled = true;
+    document.getElementById('cut').disabled = true;
 }
 
 // FOR UPDATING AFTER TOOL CHANGE
@@ -306,7 +371,6 @@ function processMouseClick(event) {
     }
 
     render();
-    updateAll();
 }
 
 // FOR UPDATING MOUSE DRAGS
@@ -334,9 +398,10 @@ function processMouseDrag(event) {
                 selectedShape.recent = false;
                 var currentValue = shapeArray[selectedShapeIndex];
                 currentValue.draw = false;
-                const moveShape = new Shape(currentValue.type, currentValue.x + (mouseX - mouseXClick), currentValue.y + (mouseY - mouseYClick), 
-                        currentValue.fillColor, currentValue.lineColor, currentValue.lineWidth, currentValue.selected, true, currentValue.deletion, 
-                        true, currentValue.changed);
+                const moveShape = new Shape(currentValue.type, currentValue.x + (mouseX - mouseXClick),
+                        currentValue.y + (mouseY - mouseYClick), currentValue.fillColor, currentValue.lineColor, 
+                        currentValue.lineWidth, currentValue.selected, true, currentValue.deletion, true,
+                        currentValue.changed);
                 moveShape.moveXDifference = mouseX - mouseXClick;
                 moveShape.moveYDifference = mouseY - mouseYClick;
                 moveShape.originalShapeIndex = selectedShapeIndex;
@@ -387,7 +452,6 @@ function processMouseDrag(event) {
 
     cleared = false;
     render();
-    updateAll();
 }
 
 // FOR UPDATING MOUSE MOVEMENTS
@@ -659,23 +723,30 @@ function clearAll() {
     shapeArrayPointer++;
     cleared = true;
     render();
-    updateAll();
+
+    // UPDATE CERTAIN BUTTON DISABLES
+    document.getElementById('delete').disabled = true;
+    document.getElementById('copy').disabled = true;
+    document.getElementById('cut').disabled = true;
 }
 
 // FOR DELETING SELECTED SHAPES
 function deleteShape() {
     undoRedoArray = [];
-    if (selectedShapeIndex != -1 || !(selectedShape === null)) {
-        var currentValue = shapeArray[++selectedShapeIndex];
-        currentValue.indexofDeletion = ++shapeArrayPointer;
-        currentValue.deletion = true;
-        currentValue.draw = false;
-        shapeArray.push(currentValue);
-        selectedShapeIndex = -1;
-        cleared = false;
-    }
+    var currentValue = shapeArray[++selectedShapeIndex];
+    currentValue.indexofDeletion = ++shapeArrayPointer;
+    currentValue.deletion = true;
+    currentValue.draw = false;
+    shapeArray.push(currentValue);
+    selectedShapeIndex = -1;
+    cleared = false;
+    deleted = true;
     render();
-    updateAll();
+    
+    // UPDATE CERTAIN BUTTON DISABLES
+    document.getElementById('delete').disabled = true;
+    document.getElementById('copy').disabled = true;
+    document.getElementById('cut').disabled = true;
 }
 
 // FOR UNDOING AN ACTION
@@ -713,7 +784,11 @@ function undoAction() {
     shapeArrayPointer--;
     cleared = false;
     render();
-    updateAll();
+
+    // UPDATE CERTAIN BUTTON DISABLES
+    document.getElementById('delete').disabled = true;
+    document.getElementById('copy').disabled = true;
+    document.getElementById('cut').disabled = true;
 }
 
 // FOR REDOING AN ACTION
@@ -751,7 +826,11 @@ function redoAction() {
     selectedShape.selected = false;
     cleared = false;
     render();
-    updateAll();
+
+    // UPDATE CERTAIN BUTTON DISABLES
+    document.getElementById('delete').disabled = true;
+    document.getElementById('copy').disabled = true;
+    document.getElementById('cut').disabled = true;
 }
 
 // FOR ONLY ALLOWING NUMBERS TO BE ENTERRED IN LINE WIDTH TEXTFIELD
