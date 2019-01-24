@@ -392,7 +392,7 @@ function processMouseDrag(event) {
     // NOW TO DO ACTION BASED ON SELECTION
     if (selectionToolValue === 'Selection') {
         var currentValue = shapeArray[selectedShapeIndex];
-        if (selectedShape != null) {
+        if (selectedShape.type != null) {
             selectedShapeIndex++;
             if (selectedShapeIndex >= 0 && selectedShapeIndex < shapeArray.length) {
                 selectedShape.recent = false;
@@ -467,11 +467,9 @@ function updateMousePosition(event) {
     document.onmouseup = function() { isMouseDown = false };
     document.onmousemove = function() { 
         if (isMouseDown) {
-            //if (clickOnCanvas) {
-                mouseX = (event.clientX - rect.left) * scaleX;
-                mouseY = (event.clientY - rect.top) * scaleY;
-                processMouseDrag(event);
-            //}
+            mouseX = (event.clientX - rect.left) * scaleX;
+            mouseY = (event.clientY - rect.top) * scaleY;
+            processMouseDrag(event);
         }
     }
 }
@@ -632,7 +630,7 @@ function updateMouseClickPosition(event) {
 
 // FOR RENDERING THE CANVAS
 function render() {
-    clearCanvas(); // remove this for matrix functions
+    clearCanvas();
 
     // DRAW WHITE BACKGROUND
     gc.beginPath();
